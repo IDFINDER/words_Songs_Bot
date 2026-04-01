@@ -21,9 +21,10 @@ from utils.songs_db import SongsDatabase, build_text_file
 # ========== دوال المساعدة ==========
 def escape_markdown(text):
     """هروب الأحرف الخاصة في Markdown"""
-    if not text:
-        return text
-    chars_to_escape = ['_', '*', '`', '[', ']', '(', ')']
+    if not text or not isinstance(text, str):
+        return ""
+    # هروب الأحرف الخاصة
+    chars_to_escape = ['_', '*', '`', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
     for char in chars_to_escape:
         text = text.replace(char, '\\' + char)
     return text
@@ -32,6 +33,8 @@ def clean_filename(text):
     """تنظيف النص لاستخدامه كاسم ملف"""
     if not text:
         return "unknown"
+    # إزالة أحرف الهروب أولاً
+    text = text.replace('\\', '')
     text = re.sub(r'[^\w\s\u0600-\u06FF\-]', '_', text)
     text = re.sub(r'\s+', '_', text)
     text = re.sub(r'_+', '_', text)
@@ -414,11 +417,11 @@ def format_single_response(song, user_id=None):
     
     # اسم الملف
     if artist:
-        clean_artist = clean_filename(artist.replace('\\', ''))
-        clean_name = clean_filename(song_name.replace('\\', ''))
+        clean_artist = clean_filename(artist)
+        clean_name = clean_filename(song_name)
         filename = f"{clean_artist}_{clean_name}.txt"
     else:
-        clean_name = clean_filename(song_name.replace('\\', ''))
+        clean_name = clean_filename(song_name)
         filename = f"{clean_name}.txt"
     
     return message, (file_content, filename)
@@ -447,6 +450,7 @@ def get_help_keyboard():
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """رسالة الترحيب"""
     user = update.effective_user
+    first_name = escape_markdown(user.first_name)
     
     user_data = get_or_create_user(
         user.id,
@@ -468,7 +472,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         usage_text = f"📊 **المتبقي اليوم:** {remaining_text}"
     
     welcome_text = f"""
-🎵 **مرحباً بك {user.first_name} في بوت كلمات الأغاني والأناشيد!**
+🎵 **مرحباً بك {first_name} في بوت كلمات الأغاني والأناشيد!**
 
 💎 **حالتك:** {status_text}
 {usage_text}
@@ -495,6 +499,7 @@ async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_info = get_user_info(user_id)
     remaining = get_remaining_uses(user_id)
     total = get_total_uses(user_id)
+    first_name = escape_markdown(update.effective_user.first_name)
     
     if user_info:
         status_text = "👑 مميز" if user_info['status'] == 'premium' else "🎁 مجاني"
@@ -502,7 +507,7 @@ async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = f"""
 📊 **إحصائياتك الشخصية**
 
-👤 **المستخدم:** {user_info['first_name']}
+👤 **المستخدم:** {first_name}
 💎 **نوع الخطة:** {status_text}
 """
         if user_info['status'] == 'premium':
@@ -712,7 +717,8 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📁 **توزيع الفئات:**
 """
         for cat, count in sorted(stats['categories'].items(), key=lambda x: x[1], reverse=True):
-            stats_text += f"• {cat}: {count} أغنية\n"
+            cat_escaped = escape_markdown(cat)
+            stats_text += f"• {cat_escaped}: {count} أغنية\n"
         
         await update.message.reply_text(stats_text, parse_mode='Markdown', reply_markup=get_main_keyboard())
     else:
@@ -766,7 +772,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     # التحقق مما إذا كان المستخدم يختار من نتائج البحث
-    if text.isdigit() and int(text) in range(1, 6):
+    if text.isdigit() and 1 <= int(text) <= 5:
         search_key = None
         for key in user_search_results.keys():
             if key.startswith(str(user_id)):
@@ -822,7 +828,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {text}...")
+    status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {escape_markdown(text)}...")
     
     results = search_multiple_songs(text)
     
@@ -870,7 +876,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         send_admin_notification(user_data, query=text, song_name=song.get('name'))
         
     else:
-        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M')}"
+        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
         user_search_results[search_key] = results
         
         results_text = format_search_results(results)
