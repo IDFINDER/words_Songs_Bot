@@ -19,21 +19,22 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.songs_db import SongsDatabase, build_text_file
 
 # ========== دوال المساعدة ==========
-def escape_markdown(text):
-    """هروب الأحرف الخاصة في Markdown"""
+def escape_html(text):
+    """هروب الأحرف الخاصة في HTML"""
     if not text or not isinstance(text, str):
         return ""
-    # هروب الأحرف الخاصة
-    chars_to_escape = ['_', '*', '`', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    for char in chars_to_escape:
-        text = text.replace(char, '\\' + char)
-    return text
+    return (text
+        .replace('&', '&amp;')
+        .replace('<', '&lt;')
+        .replace('>', '&gt;')
+        .replace('"', '&quot;')
+        .replace("'", '&#39;')
+    )
 
 def clean_filename(text):
     """تنظيف النص لاستخدامه كاسم ملف"""
     if not text:
         return "unknown"
-    # إزالة أحرف الهروب أولاً
     text = text.replace('\\', '')
     text = re.sub(r'[^\w\s\u0600-\u06FF\-]', '_', text)
     text = re.sub(r'\s+', '_', text)
@@ -290,23 +291,23 @@ def send_admin_notification(user_data, query=None, song_name=None):
         time_str = now.strftime('%H:%M')
         date_str = now.strftime('%Y/%m/%d')
         
-        message = f"🔔 **نشاط بوت الأغاني**\n\n"
-        message += f"👤 **المستخدم:** {user_data['first_name']}\n"
-        message += f"🆔 **المعرف:** `{user_data['user_id']}`\n"
-        message += f"📱 **اليوزر:** {user_data['username']}\n"
-        message += f"📅 **التاريخ:** {date_str}\n"
-        message += f"⏰ **الوقت:** {time_str}\n"
+        message = f"🔔 <b>نشاط بوت الأغاني</b>\n\n"
+        message += f"👤 <b>المستخدم:</b> {escape_html(user_data['first_name'])}\n"
+        message += f"🆔 <b>المعرف:</b> <code>{user_data['user_id']}</code>\n"
+        message += f"📱 <b>اليوزر:</b> {escape_html(user_data['username'])}\n"
+        message += f"📅 <b>التاريخ:</b> {date_str}\n"
+        message += f"⏰ <b>الوقت:</b> {time_str}\n"
         
         if query:
-            message += f"🔍 **البحث عن:** {query}\n"
+            message += f"🔍 <b>البحث عن:</b> {escape_html(query)}\n"
         if song_name:
-            message += f"🎵 **النتيجة:** {song_name}\n"
+            message += f"🎵 <b>النتيجة:</b> {escape_html(song_name)}\n"
         
-        message += f"\n📊 **البوت:** بوت الأغاني"
+        message += f"\n📊 <b>البوت:</b> بوت الأغاني"
         
         import requests
         api_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-        requests.post(api_url, data={'chat_id': ADMIN_CHAT_ID, 'text': message, 'parse_mode': 'Markdown'}, timeout=5)
+        requests.post(api_url, data={'chat_id': ADMIN_CHAT_ID, 'text': message, 'parse_mode': 'HTML'}, timeout=5)
         
     except Exception as e:
         logger.error(f"Error sending admin notification: {e}")
@@ -361,20 +362,20 @@ def format_search_results(results):
     if not results:
         return None
     
-    text = "🔍 **نتائج البحث:**\n\n"
+    text = "🔍 <b>نتائج البحث:</b>\n\n"
     for i, result in enumerate(results, 1):
-        name = escape_markdown(result['name'])
-        artist = escape_markdown(result['artist'])
-        category = escape_markdown(result['category'])
+        name = escape_html(result['name'])
+        artist = escape_html(result['artist'])
+        category = escape_html(result['category'])
         
-        text += f"{i}. 🎵 **{name}**"
+        text += f"{i}. 🎵 <b>{name}</b>"
         if artist:
             text += f" | {artist}"
         if category:
             text += f" - {category}"
         text += "\n"
     
-    text += "\n📝 **أدخل رقم الأغنية المطلوبة (1-5):**"
+    text += "\n📝 <b>أدخل رقم الأغنية المطلوبة (1-5):</b>"
     return text
 
 def format_single_response(song, user_id=None):
@@ -382,18 +383,18 @@ def format_single_response(song, user_id=None):
     if not song:
         return None, None
     
-    song_name = escape_markdown(song.get('name', 'غير معروف'))
-    artist = escape_markdown(song.get('artist', ''))
-    writer = escape_markdown(song.get('writer', ''))
-    category = escape_markdown(song.get('category', ''))
+    song_name = escape_html(song.get('name', 'غير معروف'))
+    artist = escape_html(song.get('artist', ''))
+    writer = escape_html(song.get('writer', ''))
+    category = escape_html(song.get('category', ''))
     youtube_url = song.get('youtube_url', '')
     lyrics = song.get('lyrics', '')
     
     # بناء الرسالة (أول 200 حرف)
     lyrics_preview = lyrics[:200] + ('...' if len(lyrics) > 200 else '') if lyrics else 'لا توجد كلمات متاحة'
-    lyrics_preview = escape_markdown(lyrics_preview)
+    lyrics_preview = escape_html(lyrics_preview)
     
-    message = f"**{song_name}**"
+    message = f"<b>{song_name}</b>"
     if artist:
         message += f" | {artist}"
     message += "\n\n"
@@ -408,9 +409,9 @@ def format_single_response(song, user_id=None):
         message += f"🏷️ الفئــــة: {category}\n\n"
     
     if youtube_url:
-        message += f"▶️ **مشاهدة الفيديو:**\n{youtube_url}"
+        message += f"▶️ <b>مشاهدة الفيديو:</b>\n{youtube_url}"
     
-    message += f"\n\n📎 **الكلمات الكاملة في الملف المرفق**"
+    message += f"\n\n📎 <b>الكلمات الكاملة في الملف المرفق</b>"
     
     # بناء الملف النصي
     file_content = build_text_file(song)
@@ -450,7 +451,7 @@ def get_help_keyboard():
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """رسالة الترحيب"""
     user = update.effective_user
-    first_name = escape_markdown(user.first_name)
+    first_name = escape_html(user.first_name)
     
     user_data = get_or_create_user(
         user.id,
@@ -464,34 +465,34 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if remaining == -1:
         remaining_text = "غير محدود"
-        status_text = "👑 **مميز**"
-        usage_text = f"📊 **إجمالي البحوث:** {total}"
+        status_text = "👑 <b>مميز</b>"
+        usage_text = f"📊 <b>إجمالي البحوث:</b> {total}"
     else:
         remaining_text = f"{remaining}/{FREE_LIMIT}"
-        status_text = "🎁 **مجاني**"
-        usage_text = f"📊 **المتبقي اليوم:** {remaining_text}"
+        status_text = "🎁 <b>مجاني</b>"
+        usage_text = f"📊 <b>المتبقي اليوم:</b> {remaining_text}"
     
     welcome_text = f"""
-🎵 **مرحباً بك {first_name} في بوت كلمات الأغاني والأناشيد!**
+🎵 <b>مرحباً بك {first_name} في بوت كلمات الأغاني والأناشيد!</b>
 
-💎 **حالتك:** {status_text}
+💎 <b>حالتك:</b> {status_text}
 {usage_text}
 
-📖 **ماذا يمكنني أن أفعل؟**
+📖 <b>ماذا يمكنني أن أفعل؟</b>
 • البحث عن كلمات الأغاني والأناشيد
 • البحث بالاسم أو جزء من الكلمات
 • اقتراح أغنية عشوائية
 • عرض معلومات عن الأغاني
 
-💰 **نظام الاستخدام:**
-• الخطة المجانية: **{FREE_LIMIT} بحث يومياً**
-• الخطة المميزة: **غير محدود**
+💰 <b>نظام الاستخدام:</b>
+• الخطة المجانية: <b>{FREE_LIMIT}</b> بحث يومياً
+• الخطة المميزة: <b>غير محدود</b>
 
-💎 **للاشتراك المميز:** /premium
+💎 <b>للاشتراك المميز:</b> /premium
 
-👨‍💻 **للمساعدة:** /help
+👨‍💻 <b>للمساعدة:</b> /help
 """
-    await update.message.reply_text(welcome_text, parse_mode='Markdown', reply_markup=get_main_keyboard())
+    await update.message.reply_text(welcome_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """إحصائيات المستخدم الشخصية"""
@@ -499,27 +500,27 @@ async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_info = get_user_info(user_id)
     remaining = get_remaining_uses(user_id)
     total = get_total_uses(user_id)
-    first_name = escape_markdown(update.effective_user.first_name)
+    first_name = escape_html(update.effective_user.first_name)
     
     if user_info:
         status_text = "👑 مميز" if user_info['status'] == 'premium' else "🎁 مجاني"
         
         text = f"""
-📊 **إحصائياتك الشخصية**
+📊 <b>إحصائياتك الشخصية</b>
 
-👤 **المستخدم:** {first_name}
-💎 **نوع الخطة:** {status_text}
+👤 <b>المستخدم:</b> {first_name}
+💎 <b>نوع الخطة:</b> {status_text}
 """
         if user_info['status'] == 'premium':
-            text += f"📊 **إجمالي البحوث:** {total}\n"
+            text += f"📊 <b>إجمالي البحوث:</b> {total}\n"
         else:
-            text += f"📊 **البحوث المتبقية اليوم:** {remaining}/{FREE_LIMIT}\n"
+            text += f"📊 <b>البحوث المتبقية اليوم:</b> {remaining}/{FREE_LIMIT}\n"
         
-        text += "\n💎 **للترقية:** /premium"
+        text += "\n💎 <b>للترقية:</b> /premium"
     else:
         text = "لم أتمكن من العثور على معلوماتك. يرجى إرسال /start"
     
-    await update.message.reply_text(text, parse_mode='Markdown', reply_markup=get_main_keyboard())
+    await update.message.reply_text(text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معلومات الاشتراك المميز"""
@@ -529,16 +530,16 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_info and user_info['status'] == 'premium':
         total = get_total_uses(user_id)
         text = f"""
-👑 **أنت مشترك في الخطة المميزة!**
+👑 <b>أنت مشترك في الخطة المميزة!</b>
 
-✅ **مميزات الاشتراك المميز:**
+✅ <b>مميزات الاشتراك المميز:</b>
 • بحث غير محدود
 • دعم أولوية في المعالجة
 • تحديثات حصرية أولاً
 
-📊 **إجمالي البحوث:** {total}
+📊 <b>إجمالي البحوث:</b> {total}
 
-📅 **الاشتراك نشط حالياً**
+📅 <b>الاشتراك نشط حالياً</b>
 
 شكراً لدعمك! 🙏
 """
@@ -547,26 +548,26 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         remaining = get_remaining_uses(user_id)
         text = f"""
-💎 **الاشتراك المميز**
+💎 <b>الاشتراك المميز</b>
 
-🎁 **مميزات الخطة المميزة:**
+🎁 <b>مميزات الخطة المميزة:</b>
 • ✅ بحث غير محدود
 • ✅ دعم أولوية في المعالجة
 • ✅ تحديثات حصرية أولاً
 
-💰 **السعر:**
-• **10 دولار مدى الحياة**
+💰 <b>السعر:</b>
+• <b>10 دولار مدى الحياة</b>
 
-📊 **حالتك الحالية:**
+📊 <b>حالتك الحالية:</b>
 • نوع الخطة: مجانية
 • البحوث المتبقية اليوم: {remaining}/{FREE_LIMIT}
 
-🔽 **للاشتراك، اضغط على الزر أدناه:**
+🔽 <b>للاشتراك، اضغط على الزر أدناه:</b>
 """
         keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", url=HUB_BOT_URL)]]
         reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(text, parse_mode='Markdown', reply_markup=reply_markup)
+    await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """تعليمات المساعدة"""
@@ -576,24 +577,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total = get_total_uses(user_id) if user_info else 0
     
     help_text = f"""
-🆘 **مساعدة بوت كلمات الأغاني والأناشيد**
+🆘 <b>مساعدة بوت كلمات الأغاني والأناشيد</b>
 
-🔹 **للبحث عن أغنية:**
+🔹 <b>للبحث عن أغنية:</b>
 • اكتب اسم الأغنية
 • أو جزء من الكلمات
-• مثال: `امي اليمن`
+• مثال: <code>امي اليمن</code>
 
-🔹 **اقتراح عشوائي:**
+🔹 <b>اقتراح عشوائي:</b>
 • اضغط على زر 🎲 اقتراح عشوائي
 
-🔹 **البحث المتقدم:**
+🔹 <b>البحث المتقدم:</b>
 • ابحث عن أغاني حسب الفئة (أغاني، أناشيد، زوامل، قصائد)
 
-💰 **نظام الاستخدام:**
+💰 <b>نظام الاستخدام:</b>
 • الخطة المجانية: {FREE_LIMIT} بحث يومياً
 • الخطة المميزة: غير محدود
 
-📊 **حالتك الحالية:**
+📊 <b>حالتك الحالية:</b>
 """
     if user_info and user_info['status'] == 'premium':
         help_text += f"• نوع الخطة: مميز\n• إجمالي البحوث: {total}\n"
@@ -601,16 +602,16 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         help_text += f"• نوع الخطة: مجانية\n• البحوث المتبقية اليوم: {remaining if remaining != -1 else 'غير محدود'}\n"
     
     help_text += """
-💎 **للاشتراك المميز:** /premium
+💎 <b>للاشتراك المميز:</b> /premium
 
-📋 **الأوامر:**
+📋 <b>الأوامر:</b>
 /start - بدء الاستخدام
 /help - هذه المساعدة
 /mystats - إحصائياتي الشخصية
 /premium - الاشتراك المميز
 /random - اقتراح عشوائي
 """
-    await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=get_help_keyboard())
+    await update.message.reply_text(help_text, parse_mode='HTML', reply_markup=get_help_keyboard())
 
 async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """اقتراح أغنية عشوائية"""
@@ -623,14 +624,14 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("💎 اشتراك مميز", url=HUB_BOT_URL)]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
-            f"⚠️ **لقد وصلت للحد اليومي!**\n\n"
-            f"📊 **الحد المسموح:** {FREE_LIMIT} بحث يومياً\n"
-            f"✅ **البحوث اليوم:** {current_uses}\n"
-            f"🎯 **المتبقي:** {FREE_LIMIT - current_uses}\n\n"
-            f"💎 **للبحث غير المحدود، اشترك في الخطة المميزة!**\n\n"
-            f"💰 **الاشتراك المميز:** 10 دولار مدى الحياة\n\n"
+            f"⚠️ <b>لقد وصلت للحد اليومي!</b>\n\n"
+            f"📊 <b>الحد المسموح:</b> {FREE_LIMIT} بحث يومياً\n"
+            f"✅ <b>البحوث اليوم:</b> {current_uses}\n"
+            f"🎯 <b>المتبقي:</b> {FREE_LIMIT - current_uses}\n\n"
+            f"💎 <b>للبحث غير المحدود، اشترك في الخطة المميزة!</b>\n\n"
+            f"💰 <b>الاشتراك المميز:</b> 10 دولار مدى الحياة\n\n"
             f"اضغط على الزر أدناه للاشتراك:",
-            parse_mode='Markdown',
+            parse_mode='HTML',
             reply_markup=reply_markup
         )
         return
@@ -650,7 +651,7 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await status_msg.delete()
     
     if file_data:
-        await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=get_main_keyboard())
         
         file_content, filename = file_data
         with open(filename, 'w', encoding='utf-8') as f:
@@ -676,51 +677,51 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معلومات عن البوت"""
     stats = db.get_statistics()
     about_text = f"""
-🎵 **بوت كلمات الأغاني والأناشيد** 🎵
+🎵 <b>بوت كلمات الأغاني والأناشيد</b> 🎵
 
-📖 **الإصدار:** 2.0 (بوت تلجرام)
+📖 <b>الإصدار:</b> 2.0 (بوت تلجرام)
 
-✨ **المميزات:**
+✨ <b>المميزات:</b>
 • بحث سريع في قاعدة بيانات الأغاني
 • دعم البحث بالاسم أو جزء من الكلمات
 • اقتراح أغنية عشوائية
 • تصدير الكلمات كملف نصي منسق
 • نظام مجاني + مميز
 
-💰 **نظام المدفوعات:**
+💰 <b>نظام المدفوعات:</b>
 • مجاني: {FREE_LIMIT} بحث يومياً
 • مميز: غير محدود
 
-📊 **إحصائيات قاعدة البيانات:**
+📊 <b>إحصائيات قاعدة البيانات:</b>
 • إجمالي الأغاني: {stats['total'] if stats else 0}
 • أغاني بها كلمات: {stats['with_lyrics'] if stats else 0}
 • أغاني بها فيديو: {stats['with_youtube'] if stats else 0}
 
-💎 **للاشتراك المميز:** /premium
+💎 <b>للاشتراك المميز:</b> /premium
 
-👨‍💻 **المطور:** @E_Alshabany
+👨‍💻 <b>المطور:</b> @E_Alshabany
 """
-    await update.message.reply_text(about_text, parse_mode='Markdown', reply_markup=get_main_keyboard())
+    await update.message.reply_text(about_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """إحصائيات البوت"""
     stats = db.get_statistics()
     if stats:
         stats_text = f"""
-📊 **إحصائيات بوت الأغاني**
+📊 <b>إحصائيات بوت الأغاني</b>
 
-📚 **إجمالي الأغاني:** {stats['total']}
-📝 **بها كلمات:** {stats['with_lyrics']}
-🎥 **بها فيديو:** {stats['with_youtube']}
-🖼️ **بها صور:** {stats['with_image']}
+📚 <b>إجمالي الأغاني:</b> {stats['total']}
+📝 <b>بها كلمات:</b> {stats['with_lyrics']}
+🎥 <b>بها فيديو:</b> {stats['with_youtube']}
+🖼️ <b>بها صور:</b> {stats['with_image']}
 
-📁 **توزيع الفئات:**
+📁 <b>توزيع الفئات:</b>
 """
         for cat, count in sorted(stats['categories'].items(), key=lambda x: x[1], reverse=True):
-            cat_escaped = escape_markdown(cat)
+            cat_escaped = escape_html(cat)
             stats_text += f"• {cat_escaped}: {count} أغنية\n"
         
-        await update.message.reply_text(stats_text, parse_mode='Markdown', reply_markup=get_main_keyboard())
+        await update.message.reply_text(stats_text, parse_mode='HTML', reply_markup=get_main_keyboard())
     else:
         await update.message.reply_text("❌ لم أتمكن من جلب الإحصائيات حالياً.", reply_markup=get_main_keyboard())
 
@@ -748,13 +749,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif text == "🔍 بحث متقدم":
         await update.message.reply_text(
-            "🔍 **بحث متقدم**\n\n"
+            "🔍 <b>بحث متقدم</b>\n\n"
             "يمكنك البحث باستخدام:\n"
             "• اسم الأغنية\n"
             "• كلمات من الأغنية\n"
             "• الفئة (أغاني، أناشيد، زوامل، قصائد)\n\n"
             "💡 جرب كتابة جزء من اسم الأغنية أو كلماتها",
-            parse_mode='Markdown',
+            parse_mode='HTML',
             reply_markup=get_main_keyboard()
         )
         return
@@ -790,7 +791,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 message, file_data = format_single_response(song, user_id)
                 
                 if file_data:
-                    await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
+                    await update.message.reply_text(message, parse_mode='HTML', reply_markup=get_main_keyboard())
                     
                     file_content, filename = file_data
                     with open(filename, 'w', encoding='utf-8') as f:
@@ -816,30 +817,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("💎 اشتراك مميز", url=HUB_BOT_URL)]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
-            f"⚠️ **لقد وصلت للحد اليومي!**\n\n"
-            f"📊 **الحد المسموح:** {FREE_LIMIT} بحث يومياً\n"
-            f"✅ **البحوث اليوم:** {current_uses}\n"
-            f"🎯 **المتبقي:** {FREE_LIMIT - current_uses}\n\n"
-            f"💎 **للبحث غير المحدود، اشترك في الخطة المميزة!**\n\n"
-            f"💰 **الاشتراك المميز:** 10 دولار مدى الحياة\n\n"
+            f"⚠️ <b>لقد وصلت للحد اليومي!</b>\n\n"
+            f"📊 <b>الحد المسموح:</b> {FREE_LIMIT} بحث يومياً\n"
+            f"✅ <b>البحوث اليوم:</b> {current_uses}\n"
+            f"🎯 <b>المتبقي:</b> {FREE_LIMIT - current_uses}\n\n"
+            f"💎 <b>للبحث غير المحدود، اشترك في الخطة المميزة!</b>\n\n"
+            f"💰 <b>الاشتراك المميز:</b> 10 دولار مدى الحياة\n\n"
             f"اضغط على الزر أدناه للاشتراك:",
-            parse_mode='Markdown',
+            parse_mode='HTML',
             reply_markup=reply_markup
         )
         return
     
-    status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {escape_markdown(text)}...")
+    status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {escape_html(text)}...")
     
     results = search_multiple_songs(text)
     
     if not results:
         await status_msg.edit_text(
-            f"❌ **لم أتمكن من العثور على أغنية باسم \"{escape_markdown(text)}\"**\n\n"
+            f"❌ <b>لم أتمكن من العثور على أغنية باسم \"{escape_html(text)}\"</b>\n\n"
             f"💡 جرب:\n"
             f"• كتابة جزء من الكلمات\n"
             f"• استخدام زر 🎲 اقتراح عشوائي\n"
             f"• التأكد من صحة الاسم",
-            parse_mode='Markdown',
+            parse_mode='HTML',
             reply_markup=get_main_keyboard()
         )
         return
@@ -853,7 +854,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message, file_data = format_single_response(song, user_id)
         
         if file_data:
-            await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=get_main_keyboard())
             
             file_content, filename = file_data
             with open(filename, 'w', encoding='utf-8') as f:
@@ -880,7 +881,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_search_results[search_key] = results
         
         results_text = format_search_results(results)
-        await update.message.reply_text(results_text, parse_mode='Markdown', reply_markup=get_main_keyboard())
+        await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 # ========== الدالة الرئيسية ==========
 
