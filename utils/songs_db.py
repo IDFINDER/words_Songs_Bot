@@ -6,7 +6,7 @@
 import re
 import random
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime
 from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
@@ -300,7 +300,7 @@ def build_text_file(song):
     # تذييل الملف
     content += "=" * 40 + "\n"
     content += "📎 تم التحميل عبر: بوت كلمات الأناشيد والأغاني\n"
-    content += "🔗 رابط البوت: @YouTube_Songs_Bot\n"
+    content += "🔗 رابط البوت: @words_Songs_Bot\n"
     content += "👨‍💻 تطوير: @E_Alshabany\n"
     content += "🚀 تم النشر بواسطة: Ebrahim Alshabany\n"
     content += "=" * 40 + "\n"
