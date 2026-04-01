@@ -8,6 +8,7 @@ import os
 import sys
 import logging
 import threading
+import re
 from datetime import datetime, date, timedelta
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
@@ -15,7 +16,7 @@ from flask import Flask, request
 
 # إضافة مجلد utils إلى المسار
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from utils.songs_db import SongsDatabase, format_song_response
+from utils.songs_db import SongsDatabase, format_song_response, build_text_file
 
 # ========== Flask Health Check ==========
 app = Flask(__name__)
@@ -31,16 +32,12 @@ def health():
 @app.route('/sync', methods=['GET', 'POST'])
 def sync_endpoint():
     """Endpoint للمزامنة اليدوية أو التلقائية"""
-    # التحقق من كلمة مرور بسيطة
     auth_key = request.args.get('key')
     if auth_key != os.environ.get('SYNC_KEY', 'sync2024'):
         return '❌ مفتاح غير صحيح', 401
     
     try:
         import subprocess
-        import sys
-        
-        # تشغيل مزامنة الأغاني
         result = subprocess.run(
             [sys.executable, 'sync_songs.py'],
             capture_output=True,
@@ -88,6 +85,9 @@ logger = logging.getLogger(__name__)
 db = SongsDatabase(SUPABASE_URL, SUPABASE_KEY)
 supabase = db.supabase
 
+# تخزين مؤقت لنتائج البحث المتعدد (لاختيار الرقم)
+user_search_results = {}
+
 # ========== دوال قاعدة البيانات (مستخدمين) ==========
 
 def get_or_create_user(user_id, first_name, username, language_code):
@@ -116,7 +116,6 @@ def get_or_create_user(user_id, first_name, username, language_code):
             response = supabase.table('users').insert(new_user).execute()
             user = response.data[0]
         
-        # إنشاء سجل للبوت الحالي في bot_usage إذا لم يكن موجوداً
         usage = supabase.table('bot_usage').select('*').eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         if not usage.data:
             supabase.table('bot_usage').insert({
@@ -157,7 +156,7 @@ def get_user_usage(user_id):
         return None
 
 def increment_usage(user_id):
-    """زيادة عدد استخدامات المستخدم"""
+    """زيادة عدد استخدامات المستخدم (للمجاني والمميز على حد سواء)"""
     try:
         user = get_user_info(user_id)
         if not user:
@@ -177,6 +176,7 @@ def increment_usage(user_id):
                     'first_name': first_name
                 }).eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         
+        # تسجيل للمجاني والمميز على حد سواء (زيادة total_uses فقط للمميز)
         if user['status'] == 'free':
             supabase.table('bot_usage').update({
                 'daily_uses': usage['daily_uses'] + 1 if usage else 1,
@@ -186,6 +186,7 @@ def increment_usage(user_id):
                 'first_name': first_name
             }).eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         else:
+            # المميز: زيادة total_uses فقط
             supabase.table('bot_usage').update({
                 'total_uses': usage['total_uses'] + 1 if usage else 1,
                 'updated_at': datetime.now().isoformat(),
@@ -199,7 +200,7 @@ def increment_usage(user_id):
         return False
 
 def can_search(user_id):
-    """التحقق مما إذا كان المستخدم يمكنه البحث"""
+    """التحقق مما إذا كان المستخدم يمكنه البحث (الحد اليومي للمجانيين فقط)"""
     user = get_user_info(user_id)
     if not user:
         return True, 0
@@ -246,7 +247,7 @@ def update_user_status(user_id, status, days=30):
         return False
 
 def get_remaining_uses(user_id):
-    """الحصول على عدد الاستخدامات المتبقية للمستخدم"""
+    """الحصول على عدد الاستخدامات المتبقية للمستخدم (للمجانيين فقط)"""
     can_dl, current_uses = can_search(user_id)
     if not can_dl:
         return 0
@@ -256,6 +257,11 @@ def get_remaining_uses(user_id):
         return -1
     
     return FREE_LIMIT - current_uses
+
+def get_total_uses(user_id):
+    """الحصول على إجمالي استخدامات المستخدم (للمميزين)"""
+    usage = get_user_usage(user_id)
+    return usage.get('total_uses', 0) if usage else 0
 
 def send_admin_notification(user_data, query=None, song_name=None):
     """إرسال إشعار للمدير"""
@@ -284,6 +290,124 @@ def send_admin_notification(user_data, query=None, song_name=None):
         
     except Exception as e:
         logger.error(f"Error sending admin notification: {e}")
+
+# ========== دوال البحث المتقدم ==========
+
+def search_multiple_songs(query):
+    """البحث عن أغاني وإرجاع قائمة بالنتائج مرتبة حسب الأفضلية"""
+    try:
+        normalized_query = db.expand_with_synonyms(db.normalize_text(query))
+        query_words = [w for w in normalized_query.split() if len(w) >= 3]
+        
+        if not query_words:
+            return []
+        
+        songs = db.get_all_songs()
+        results = []
+        
+        for song in songs:
+            song_name = db.normalize_text(song.get('name', ''))
+            lyrics = db.normalize_text(song.get('lyrics', ''))
+            artist = db.normalize_text(song.get('artist', ''))
+            
+            score = 0
+            
+            # التطابق في الاسم
+            for word in query_words:
+                if word in song_name:
+                    score += 0.5
+                if word in artist:
+                    score += 0.3
+            
+            # التطابق في الكلمات
+            if lyrics:
+                for word in query_words:
+                    if word in lyrics:
+                        score += 0.1
+            
+            if score > 0:
+                results.append({
+                    'song': song,
+                    'score': score,
+                    'name': song.get('name', ''),
+                    'artist': song.get('artist', ''),
+                    'category': song.get('category', '')
+                })
+        
+        # ترتيب حسب الدرجة
+        results.sort(key=lambda x: x['score'], reverse=True)
+        return results[:5]  # أعلى 5 نتائج
+        
+    except Exception as e:
+        logger.error(f"Error in search_multiple_songs: {e}")
+        return []
+
+def format_search_results(results):
+    """تنسيق نتائج البحث المتعدد"""
+    if not results:
+        return None
+    
+    text = "🔍 **نتائج البحث:**\n\n"
+    for i, result in enumerate(results, 1):
+        song = result['song']
+        name = song.get('name', 'غير معروف')
+        artist = song.get('artist', '')
+        category = song.get('category', '')
+        
+        text += f"{i}. 🎵 **{name}**"
+        if artist:
+            text += f" | {artist}"
+        if category:
+            text += f" - {category}"
+        text += "\n"
+    
+    text += "\n📝 **أدخل رقم الأغنية المطلوبة (1-5):**"
+    return text
+
+def format_single_response(song, user_id=None):
+    """تنسيق رد الأغنية الواحدة (رسالة + ملف منفصل)"""
+    if not song:
+        return None, None
+    
+    song_name = song.get('name', 'غير معروف')
+    artist = song.get('artist', '')
+    writer = song.get('writer', '')
+    category = song.get('category', '')
+    youtube_url = song.get('youtube_url', '')
+    lyrics = song.get('lyrics', '')
+    
+    # بناء الرسالة (أول 200 حرف)
+    lyrics_preview = lyrics[:200] + ('...' if len(lyrics) > 200 else '') if lyrics else 'لا توجد كلمات متاحة'
+    
+    message = f"🎵 **{song_name}**"
+    if artist:
+        message += f" | {artist}"
+    message += "\n\n"
+    
+    if lyrics:
+        message += f"📝 الـكـلمــــات:\n{lyrics_preview}\n\n"
+    
+    if writer:
+        message += f"✍️ من كلــمــــات: {writer}\n\n"
+    
+    if category:
+        message += f"🏷️ الفئــــة: {category}\n\n"
+    
+    if youtube_url:
+        message += f"▶️ **مشاهدة الفيديو:**\n{youtube_url}"
+    
+    message += f"\n\n📎 **الكلمات الكاملة في الملف المرفق**"
+    
+    # بناء الملف النصي
+    file_content = build_text_file(song)
+    
+    # اسم الملف
+    if artist:
+        filename = f"{db.clean_filename(artist)}_{db.clean_filename(song_name)}.txt"
+    else:
+        filename = f"{db.clean_filename(song_name)}.txt"
+    
+    return message, (file_content, filename)
 
 # ========== لوحات المفاتيح ==========
 
@@ -318,10 +442,22 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     remaining = get_remaining_uses(user.id)
-    remaining_text = f"{remaining}/{FREE_LIMIT}" if remaining != -1 else "غير محدود"
+    total = get_total_uses(user.id)
+    
+    if remaining == -1:
+        remaining_text = "غير محدود"
+        status_text = "👑 **مميز**"
+        usage_text = f"📊 **إجمالي البحوث:** {total}"
+    else:
+        remaining_text = f"{remaining}/{FREE_LIMIT}"
+        status_text = "🎁 **مجاني**"
+        usage_text = f"📊 **المتبقي اليوم:** {remaining_text}"
     
     welcome_text = f"""
 🎵 **مرحباً بك {user.first_name} في بوت كلمات الأغاني والأناشيد!**
+
+💎 **حالتك:** {status_text}
+{usage_text}
 
 📖 **ماذا يمكنني أن أفعل؟**
 • البحث عن كلمات الأغاني والأناشيد
@@ -333,14 +469,38 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • الخطة المجانية: **{FREE_LIMIT} بحث يومياً**
 • الخطة المميزة: **غير محدود**
 
-📊 **حالتك الحالية:**
-• البحوث المتبقية اليوم: {remaining_text}
-
 💎 **للاشتراك المميز:** /premium
 
 👨‍💻 **للمساعدة:** /help
 """
     await update.message.reply_text(welcome_text, parse_mode='Markdown', reply_markup=get_main_keyboard())
+
+async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """إحصائيات المستخدم الشخصية"""
+    user_id = update.effective_user.id
+    user_info = get_user_info(user_id)
+    remaining = get_remaining_uses(user_id)
+    total = get_total_uses(user_id)
+    
+    if user_info:
+        status_text = "👑 مميز" if user_info['status'] == 'premium' else "🎁 مجاني"
+        
+        text = f"""
+📊 **إحصائياتك الشخصية**
+
+👤 **المستخدم:** {user_info['first_name']}
+💎 **نوع الخطة:** {status_text}
+"""
+        if user_info['status'] == 'premium':
+            text += f"📊 **إجمالي البحوث:** {total}\n"
+        else:
+            text += f"📊 **البحوث المتبقية اليوم:** {remaining}/{FREE_LIMIT}\n"
+        
+        text += "\n💎 **للترقية:** /premium"
+    else:
+        text = "لم أتمكن من العثور على معلوماتك. يرجى إرسال /start"
+    
+    await update.message.reply_text(text, parse_mode='Markdown', reply_markup=get_main_keyboard())
 
 async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معلومات الاشتراك المميز"""
@@ -348,13 +508,16 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_info = get_user_info(user_id)
     
     if user_info and user_info['status'] == 'premium':
-        text = """
+        total = get_total_uses(user_id)
+        text = f"""
 👑 **أنت مشترك في الخطة المميزة!**
 
 ✅ **مميزات الاشتراك المميز:**
 • بحث غير محدود
 • دعم أولوية في المعالجة
 • تحديثات حصرية أولاً
+
+📊 **إجمالي البحوث:** {total}
 
 📅 **الاشتراك نشط حالياً**
 
@@ -391,6 +554,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_info = get_user_info(user_id)
     remaining = get_remaining_uses(user_id) if user_info else FREE_LIMIT
+    total = get_total_uses(user_id) if user_info else 0
     
     help_text = f"""
 🆘 **مساعدة بوت كلمات الأغاني والأناشيد**
@@ -411,13 +575,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • الخطة المميزة: غير محدود
 
 📊 **حالتك الحالية:**
-• البحوث المتبقية اليوم: {remaining if remaining != -1 else 'غير محدود'}
-
+"""
+    if user_info and user_info['status'] == 'premium':
+        help_text += f"• نوع الخطة: مميز\n• إجمالي البحوث: {total}\n"
+    else:
+        help_text += f"• نوع الخطة: مجانية\n• البحوث المتبقية اليوم: {remaining if remaining != -1 else 'غير محدود'}\n"
+    
+    help_text += """
 💎 **للاشتراك المميز:** /premium
 
 📋 **الأوامر:**
 /start - بدء الاستخدام
 /help - هذه المساعدة
+/mystats - إحصائياتي الشخصية
 /premium - الاشتراك المميز
 /random - اقتراح عشوائي
 """
@@ -455,14 +625,17 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status_msg.edit_text("❌ لم أتمكن من العثور على أغاني في قاعدة البيانات حالياً.")
         return
     
-    # زيادة عدد الاستخدامات للمستخدم المجاني
-    if user_info and user_info['status'] == 'free':
-        increment_usage(user_id)
+    # زيادة عدد الاستخدامات
+    increment_usage(user_id)
     
     # تنسيق الرد
-    message, file_data = format_song_response(song)
+    message, file_data = format_single_response(song, user_id)
     
     if file_data:
+        # إرسال الرسالة أولاً
+        await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
+        
+        # ثم إرسال الملف
         file_content, filename = file_data
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(file_content)
@@ -471,9 +644,7 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_document(
                 document=f,
                 filename=filename,
-                caption=message,
-                parse_mode='Markdown',
-                reply_markup=get_main_keyboard()
+                caption="📄 ملف الكلمات الكاملة"
             )
         
         os.remove(filename)
@@ -494,13 +665,13 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     about_text = f"""
 🎵 **بوت كلمات الأغاني والأناشيد** 🎵
 
-📖 **الإصدار:** 1.0 (بوت تلجرام)
+📖 **الإصدار:** 2.0 (بوت تلجرام)
 
 ✨ **المميزات:**
 • بحث سريع في قاعدة بيانات الأغاني
 • دعم البحث بالاسم أو جزء من الكلمات
 • اقتراح أغنية عشوائية
-• تصدير الكلمات كملف نصي
+• تصدير الكلمات كملف نصي منسق
 • نظام مجاني + مميز
 
 💰 **نظام المدفوعات:**
@@ -582,7 +753,48 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await premium_command(update, context)
         return
     
-    # البحث عن أغنية
+    elif text == "/mystats":
+        await my_stats_command(update, context)
+        return
+    
+    # التحقق مما إذا كان المستخدم يختار من نتائج البحث
+    if text.isdigit() and int(text) in range(1, 6):
+        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H')}"
+        if search_key in user_search_results:
+            results = user_search_results[search_key]
+            idx = int(text) - 1
+            if idx < len(results):
+                song = results[idx]['song']
+                
+                # زيادة عدد الاستخدامات
+                increment_usage(user_id)
+                
+                # تنسيق الرد
+                message, file_data = format_single_response(song, user_id)
+                
+                if file_data:
+                    # إرسال الرسالة أولاً
+                    await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
+                    
+                    # ثم إرسال الملف
+                    file_content, filename = file_data
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        f.write(file_content)
+                    
+                    with open(filename, 'rb') as f:
+                        await update.message.reply_document(
+                            document=f,
+                            filename=filename,
+                            caption="📄 ملف الكلمات الكاملة"
+                        )
+                    
+                    os.remove(filename)
+                
+                # حذف النتائج المؤقتة
+                del user_search_results[search_key]
+                return
+    
+    # البحث العادي
     user_info = get_user_info(user_id)
     
     # التحقق من الحد اليومي
@@ -606,9 +818,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {text}...")
     
-    song = db.search_songs(text)
+    # البحث المتقدم - جلب نتائج متعددة
+    results = search_multiple_songs(text)
     
-    if not song:
+    if not results:
         await status_msg.edit_text(
             f"❌ **لم أتمكن من العثور على أغنية باسم \"{text}\"**\n\n"
             f"💡 جرب:\n"
@@ -620,38 +833,52 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # زيادة عدد الاستخدامات للمستخدم المجاني
-    if user_info and user_info['status'] == 'free':
+    # إذا كانت هناك نتيجة واحدة فقط
+    if len(results) == 1:
+        song = results[0]['song']
+        
+        # زيادة عدد الاستخدامات
         increment_usage(user_id)
-    
-    # تنسيق الرد
-    message, file_data = format_song_response(song)
-    
-    if file_data:
-        file_content, filename = file_data
-        with open(filename, 'w', encoding='utf-8') as f:
-            f.write(file_content)
         
-        with open(filename, 'rb') as f:
-            await update.message.reply_document(
-                document=f,
-                filename=filename,
-                caption=message,
-                parse_mode='Markdown',
-                reply_markup=get_main_keyboard()
-            )
+        # تنسيق الرد
+        message, file_data = format_single_response(song, user_id)
         
-        os.remove(filename)
+        await status_msg.delete()
+        
+        if file_data:
+            # إرسال الرسالة أولاً
+            await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
+            
+            # ثم إرسال الملف
+            file_content, filename = file_data
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(file_content)
+            
+            with open(filename, 'rb') as f:
+                await update.message.reply_document(
+                    document=f,
+                    filename=filename,
+                    caption="📄 ملف الكلمات الكاملة"
+                )
+            
+            os.remove(filename)
+        
+        # إرسال إشعار للمدير
+        user_data = {
+            'user_id': user_id,
+            'first_name': update.effective_user.first_name,
+            'username': update.effective_user.username or 'لا يوجد'
+        }
+        send_admin_notification(user_data, query=text, song_name=song.get('name'))
+        
     else:
-        await status_msg.edit_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
-    
-    # إرسال إشعار للمدير
-    user_data = {
-        'user_id': user_id,
-        'first_name': update.effective_user.first_name,
-        'username': update.effective_user.username or 'لا يوجد'
-    }
-    send_admin_notification(user_data, query=text, song_name=song.get('name'))
+        # نتائج متعددة - عرض الخيارات
+        await status_msg.delete()
+        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H')}"
+        user_search_results[search_key] = results
+        
+        results_text = format_search_results(results)
+        await update.message.reply_text(results_text, parse_mode='Markdown', reply_markup=get_main_keyboard())
 
 # ========== الدالة الرئيسية ==========
 
@@ -663,6 +890,7 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("about", about_command))
     application.add_handler(CommandHandler("stats", stats_command))
+    application.add_handler(CommandHandler("mystats", my_stats_command))
     application.add_handler(CommandHandler("premium", premium_command))
     application.add_handler(CommandHandler("random", random_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
@@ -671,10 +899,10 @@ def main():
     print("="*60)
     print("🎵 بوت كلمات الأغاني والأناشيد - النسخة المميزة")
     print("🤖 @words_Songs_Bot")
-    print("✅ أوامر: /start /help /about /stats /premium /random")
+    print("✅ أوامر: /start /help /about /stats /mystats /premium /random")
     print(f"✅ نظام المدفوعات: مجاني {FREE_LIMIT} بحث - مميز غير محدود")
     print("✅ قاعدة بيانات: Supabase (متكاملة مع النظام الموحد)")
-    print("✅ الاشتراك عبر: @words_Songs_Bot")
+    print("✅ الاشتراك عبر: @SocMed_tools_bot")
     print("✅ Endpoint المزامنة: /sync?key=مفتاحك")
     print("="*60)
     
