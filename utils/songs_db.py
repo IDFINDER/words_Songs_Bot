@@ -79,8 +79,11 @@ def expand_with_synonyms(text):
 
 def clean_filename(text):
     """تنظيف النص لاستخدامه كاسم ملف"""
+    if not text:
+        return "unknown"
     text = re.sub(r'[^\w\s\u0600-\u06FF\-]', '_', text)
     text = re.sub(r'\s+', '_', text)
+    text = re.sub(r'_+', '_', text)
     return text[:50]
 
 # ========== دوال قاعدة البيانات ==========
@@ -90,6 +93,10 @@ class SongsDatabase:
     
     def __init__(self, supabase_url: str, supabase_key: str):
         self.supabase: Client = create_client(supabase_url, supabase_key)
+        # ربط الدوال المساعدة بالفئة
+        self.normalize_text = normalize_text
+        self.expand_with_synonyms = expand_with_synonyms
+        self.clean_filename = clean_filename
     
     def get_all_songs(self):
         """جلب جميع الأغاني"""
@@ -114,7 +121,7 @@ class SongsDatabase:
     def search_songs(self, query):
         """البحث عن أغاني في قاعدة البيانات"""
         try:
-            normalized_query = expand_with_synonyms(normalize_text(query))
+            normalized_query = self.expand_with_synonyms(self.normalize_text(query))
             query_words = [w for w in normalized_query.split() if len(w) >= MIN_WORD_LENGTH]
             
             if not query_words:
@@ -128,10 +135,10 @@ class SongsDatabase:
             exact_matches = []
             
             for song in songs:
-                song_name = normalize_text(song.get('name', ''))
-                lyrics = normalize_text(song.get('lyrics', ''))
-                writer = normalize_text(song.get('writer', ''))
-                artist = normalize_text(song.get('artist', ''))
+                song_name = self.normalize_text(song.get('name', ''))
+                lyrics = self.normalize_text(song.get('lyrics', ''))
+                writer = self.normalize_text(song.get('writer', ''))
+                artist = self.normalize_text(song.get('artist', ''))
                 
                 # التحقق من التطابق التام
                 if song_name == normalized_query:
