@@ -16,7 +16,26 @@ from flask import Flask, request
 
 # إضافة مجلد utils إلى المسار
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from utils.songs_db import SongsDatabase, format_song_response, build_text_file
+from utils.songs_db import SongsDatabase, build_text_file
+
+# ========== دوال المساعدة ==========
+def escape_markdown(text):
+    """هروب الأحرف الخاصة في Markdown"""
+    if not text:
+        return text
+    chars_to_escape = ['_', '*', '`', '[', ']', '(', ')']
+    for char in chars_to_escape:
+        text = text.replace(char, '\\' + char)
+    return text
+
+def clean_filename(text):
+    """تنظيف النص لاستخدامه كاسم ملف"""
+    if not text:
+        return "unknown"
+    text = re.sub(r'[^\w\s\u0600-\u06FF\-]', '_', text)
+    text = re.sub(r'\s+', '_', text)
+    text = re.sub(r'_+', '_', text)
+    return text[:50]
 
 # ========== Flask Health Check ==========
 app = Flask(__name__)
@@ -176,7 +195,6 @@ def increment_usage(user_id):
                     'first_name': first_name
                 }).eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         
-        # تسجيل للمجاني والمميز على حد سواء (زيادة total_uses فقط للمميز)
         if user['status'] == 'free':
             supabase.table('bot_usage').update({
                 'daily_uses': usage['daily_uses'] + 1 if usage else 1,
@@ -186,7 +204,6 @@ def increment_usage(user_id):
                 'first_name': first_name
             }).eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         else:
-            # المميز: زيادة total_uses فقط
             supabase.table('bot_usage').update({
                 'total_uses': usage['total_uses'] + 1 if usage else 1,
                 'updated_at': datetime.now().isoformat(),
@@ -312,18 +329,13 @@ def search_multiple_songs(query):
             
             score = 0
             
-            # التطابق في الاسم
             for word in query_words:
                 if word in song_name:
                     score += 0.5
                 if word in artist:
                     score += 0.3
-            
-            # التطابق في الكلمات
-            if lyrics:
-                for word in query_words:
-                    if word in lyrics:
-                        score += 0.1
+                if lyrics and word in lyrics:
+                    score += 0.1
             
             if score > 0:
                 results.append({
@@ -334,9 +346,8 @@ def search_multiple_songs(query):
                     'category': song.get('category', '')
                 })
         
-        # ترتيب حسب الدرجة
         results.sort(key=lambda x: x['score'], reverse=True)
-        return results[:5]  # أعلى 5 نتائج
+        return results[:5]
         
     except Exception as e:
         logger.error(f"Error in search_multiple_songs: {e}")
@@ -349,10 +360,9 @@ def format_search_results(results):
     
     text = "🔍 **نتائج البحث:**\n\n"
     for i, result in enumerate(results, 1):
-        song = result['song']
-        name = song.get('name', 'غير معروف')
-        artist = song.get('artist', '')
-        category = song.get('category', '')
+        name = escape_markdown(result['name'])
+        artist = escape_markdown(result['artist'])
+        category = escape_markdown(result['category'])
         
         text += f"{i}. 🎵 **{name}**"
         if artist:
@@ -369,17 +379,18 @@ def format_single_response(song, user_id=None):
     if not song:
         return None, None
     
-    song_name = song.get('name', 'غير معروف')
-    artist = song.get('artist', '')
-    writer = song.get('writer', '')
-    category = song.get('category', '')
+    song_name = escape_markdown(song.get('name', 'غير معروف'))
+    artist = escape_markdown(song.get('artist', ''))
+    writer = escape_markdown(song.get('writer', ''))
+    category = escape_markdown(song.get('category', ''))
     youtube_url = song.get('youtube_url', '')
     lyrics = song.get('lyrics', '')
     
     # بناء الرسالة (أول 200 حرف)
     lyrics_preview = lyrics[:200] + ('...' if len(lyrics) > 200 else '') if lyrics else 'لا توجد كلمات متاحة'
+    lyrics_preview = escape_markdown(lyrics_preview)
     
-    message = f"🎵 **{song_name}**"
+    message = f"**{song_name}**"
     if artist:
         message += f" | {artist}"
     message += "\n\n"
@@ -403,9 +414,12 @@ def format_single_response(song, user_id=None):
     
     # اسم الملف
     if artist:
-        filename = f"{db.clean_filename(artist)}_{db.clean_filename(song_name)}.txt"
+        clean_artist = clean_filename(artist.replace('\\', ''))
+        clean_name = clean_filename(song_name.replace('\\', ''))
+        filename = f"{clean_artist}_{clean_name}.txt"
     else:
-        filename = f"{db.clean_filename(song_name)}.txt"
+        clean_name = clean_filename(song_name.replace('\\', ''))
+        filename = f"{clean_name}.txt"
     
     return message, (file_content, filename)
 
@@ -598,7 +612,6 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_info = get_user_info(user_id)
     
-    # التحقق من الحد اليومي
     can_search_bool, current_uses = can_search(user_id)
     
     if not can_search_bool and user_info and user_info['status'] == 'free':
@@ -622,20 +635,18 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     song = db.get_random_song()
     
     if not song:
-        await status_msg.edit_text("❌ لم أتمكن من العثور على أغاني في قاعدة البيانات حالياً.")
+        await status_msg.edit_text("❌ لم أتمكن من العثور على أغاني في قاعدة البيانات حالياً.", reply_markup=get_main_keyboard())
         return
     
-    # زيادة عدد الاستخدامات
     increment_usage(user_id)
     
-    # تنسيق الرد
     message, file_data = format_single_response(song, user_id)
     
+    await status_msg.delete()
+    
     if file_data:
-        # إرسال الرسالة أولاً
         await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
         
-        # ثم إرسال الملف
         file_content, filename = file_data
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(file_content)
@@ -648,10 +659,7 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         
         os.remove(filename)
-    else:
-        await status_msg.edit_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
     
-    # إرسال إشعار للمدير
     user_data = {
         'user_id': user_id,
         'first_name': update.effective_user.first_name,
@@ -759,24 +767,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # التحقق مما إذا كان المستخدم يختار من نتائج البحث
     if text.isdigit() and int(text) in range(1, 6):
-        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H')}"
-        if search_key in user_search_results:
+        search_key = None
+        for key in user_search_results.keys():
+            if key.startswith(str(user_id)):
+                search_key = key
+                break
+        
+        if search_key and search_key in user_search_results:
             results = user_search_results[search_key]
             idx = int(text) - 1
             if idx < len(results):
                 song = results[idx]['song']
                 
-                # زيادة عدد الاستخدامات
                 increment_usage(user_id)
                 
-                # تنسيق الرد
                 message, file_data = format_single_response(song, user_id)
                 
                 if file_data:
-                    # إرسال الرسالة أولاً
                     await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
                     
-                    # ثم إرسال الملف
                     file_content, filename = file_data
                     with open(filename, 'w', encoding='utf-8') as f:
                         f.write(file_content)
@@ -790,14 +799,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     
                     os.remove(filename)
                 
-                # حذف النتائج المؤقتة
                 del user_search_results[search_key]
                 return
     
     # البحث العادي
     user_info = get_user_info(user_id)
-    
-    # التحقق من الحد اليومي
     can_search_bool, current_uses = can_search(user_id)
     
     if not can_search_bool and user_info and user_info['status'] == 'free':
@@ -818,12 +824,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {text}...")
     
-    # البحث المتقدم - جلب نتائج متعددة
     results = search_multiple_songs(text)
     
     if not results:
         await status_msg.edit_text(
-            f"❌ **لم أتمكن من العثور على أغنية باسم \"{text}\"**\n\n"
+            f"❌ **لم أتمكن من العثور على أغنية باسم \"{escape_markdown(text)}\"**\n\n"
             f"💡 جرب:\n"
             f"• كتابة جزء من الكلمات\n"
             f"• استخدام زر 🎲 اقتراح عشوائي\n"
@@ -833,23 +838,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # إذا كانت هناك نتيجة واحدة فقط
+    await status_msg.delete()
+    
     if len(results) == 1:
         song = results[0]['song']
-        
-        # زيادة عدد الاستخدامات
         increment_usage(user_id)
         
-        # تنسيق الرد
         message, file_data = format_single_response(song, user_id)
         
-        await status_msg.delete()
-        
         if file_data:
-            # إرسال الرسالة أولاً
             await update.message.reply_text(message, parse_mode='Markdown', reply_markup=get_main_keyboard())
             
-            # ثم إرسال الملف
             file_content, filename = file_data
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(file_content)
@@ -863,7 +862,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             os.remove(filename)
         
-        # إرسال إشعار للمدير
         user_data = {
             'user_id': user_id,
             'first_name': update.effective_user.first_name,
@@ -872,9 +870,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         send_admin_notification(user_data, query=text, song_name=song.get('name'))
         
     else:
-        # نتائج متعددة - عرض الخيارات
-        await status_msg.delete()
-        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H')}"
+        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M')}"
         user_search_results[search_key] = results
         
         results_text = format_search_results(results)
@@ -903,7 +899,6 @@ def main():
     print(f"✅ نظام المدفوعات: مجاني {FREE_LIMIT} بحث - مميز غير محدود")
     print("✅ قاعدة بيانات: Supabase (متكاملة مع النظام الموحد)")
     print("✅ الاشتراك عبر: @SocMed_tools_bot")
-    print("✅ Endpoint المزامنة: /sync?key=مفتاحك")
     print("="*60)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
