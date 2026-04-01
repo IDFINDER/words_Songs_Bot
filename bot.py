@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 YouTube Songs Bot - Premium Version with Supabase
 بوت كلمات الأغاني والأناشيد
@@ -11,7 +11,7 @@ import threading
 from datetime import datetime, date, timedelta
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from flask import Flask
+from flask import Flask, request
 
 # إضافة مجلد utils إلى المسار
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +26,37 @@ PORT = int(os.environ.get('PORT', 10000))
 @app.route('/healthcheck')
 def health():
     return "OK", 200
+
+# ========== Endpoint للمزامنة ==========
+@app.route('/sync', methods=['GET', 'POST'])
+def sync_endpoint():
+    """Endpoint للمزامنة اليدوية أو التلقائية"""
+    # التحقق من كلمة مرور بسيطة
+    auth_key = request.args.get('key')
+    if auth_key != os.environ.get('SYNC_KEY', 'sync2024'):
+        return '❌ مفتاح غير صحيح', 401
+    
+    try:
+        import subprocess
+        import sys
+        
+        # تشغيل مزامنة الأغاني
+        result = subprocess.run(
+            [sys.executable, 'sync_songs.py'],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode == 0:
+            return f"✅ تمت المزامنة بنجاح!\n\n{result.stdout}", 200
+        else:
+            return f"❌ فشلت المزامنة!\n\n{result.stderr}", 500
+            
+    except subprocess.TimeoutExpired:
+        return "⏰ انتهى وقت المزامنة (5 دقائق)", 408
+    except Exception as e:
+        return f"❌ خطأ: {e}", 500
 
 def run_flask():
     app.run(host='0.0.0.0', port=PORT, debug=False)
@@ -644,6 +675,7 @@ def main():
     print(f"✅ نظام المدفوعات: مجاني {FREE_LIMIT} بحث - مميز غير محدود")
     print("✅ قاعدة بيانات: Supabase (متكاملة مع النظام الموحد)")
     print("✅ الاشتراك عبر: @words_Songs_Bot")
+    print("✅ Endpoint المزامنة: /sync?key=مفتاحك")
     print("="*60)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
