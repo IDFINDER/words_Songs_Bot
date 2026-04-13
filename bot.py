@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Poets Words Bot - Premium Version with Supabase + Web Dashboard
-بوت كلمات الأغاني والأناشيد - بوت الشعراء (نسخة متكاملة مع لوحة تحكم)
+================================================================================
+القسم 0: معلومات عامة عن البوت
+================================================================================
+بوت كلمات و شعراء - إصدار متكامل مع لوحة تحكم وصفحة دفع
+@kalimat_ws_shoara_bot
 """
 
 import os
@@ -11,14 +14,18 @@ import threading
 import re
 from datetime import datetime, date, timedelta
 from flask import Flask, request, render_template, redirect, url_for, jsonify
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # إضافة مجلد utils إلى المسار
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils.songs_db import SongsDatabase, build_text_file
 
-# ========== دوال المساعدة ==========
+
+# =============================================================================
+# القسم 1: دوال المساعدة العامة
+# =============================================================================
+
 def escape_html(text):
     """هروب الأحرف الخاصة في HTML"""
     if not text or not isinstance(text, str):
@@ -31,6 +38,7 @@ def escape_html(text):
         .replace("'", '&#39;')
     )
 
+
 def clean_filename(text):
     """تنظيف النص لاستخدامه كاسم ملف"""
     if not text:
@@ -41,37 +49,41 @@ def clean_filename(text):
     text = re.sub(r'_+', '_', text)
     return text[:50]
 
-# ========== إعدادات Flask ==========
-# ========== إعداد مسار القوالب بشكل مطلق ==========
-import os
 
-# احصل على المسار المطلق للمشروع
+# =============================================================================
+# القسم 2: إعدادات Flask وخادم الويب
+# =============================================================================
+
+# إعداد مسار القوالب بشكل مطلق
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 
-# تأكد من وجود المجلد
+# التحقق من وجود مجلد القوالب
 if os.path.exists(TEMPLATE_DIR):
     print(f"✅ Templates folder found at: {TEMPLATE_DIR}")
-    print(f"📄 Files: {os.listdir(TEMPLATE_DIR)}")
 else:
-    print(f"❌ Templates folder NOT found at: {TEMPLATE_DIR}")
+    print(f"⚠️ Templates folder not found at: {TEMPLATE_DIR}")
 
-# عرف Flask مع template_folder مطلق
+# تعريف تطبيق Flask
 app = Flask(__name__, template_folder=TEMPLATE_DIR)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'poets_words_secret_key_2024')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'kalimat_ws_shoara_secret_2024')
 PORT = int(os.environ.get('PORT', 10000))
 
-# ========== متغيرات البيئة ==========
+
+# =============================================================================
+# القسم 3: متغيرات البيئة والإعدادات الأساسية
+# =============================================================================
+
 TOKEN = os.environ.get('TELEGRAM_TOKEN')
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
-BOT_NAME = os.environ.get('BOT_NAME', 'poets_words_bot')
+BOT_NAME = os.environ.get('BOT_NAME', 'kalimat_ws_shoara_bot')
 FREE_LIMIT = int(os.environ.get('FREE_LIMIT', '5'))
-HUB_BOT_URL = os.environ.get('HUB_BOT_URL', 'https://t.me/SocMed_tools_bot')
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID', '7850462368')
 CHANNEL_URL = os.environ.get('CHANNEL_URL', 'https://t.me/poets_words')
 GROUP_URL = os.environ.get('GROUP_URL', 'https://t.me/poetswords')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
+APP_URL = os.environ.get('APP_URL', 'https://words-songs-bot.onrender.com')
 
 if not TOKEN or not SUPABASE_URL or not SUPABASE_KEY:
     print("❌ خطأ: تأكد من تعيين المتغيرات المطلوبة")
@@ -84,14 +96,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ========== Supabase Setup ==========
+# إعداد Supabase
 db = SongsDatabase(SUPABASE_URL, SUPABASE_KEY)
 supabase = db.supabase
 
-# تخزين مؤقت لنتائج البحث المتعدد (لاختيار الرقم)
+# تخزين مؤقت لنتائج البحث المتعدد
 user_search_results = {}
 
-# ========== دوال قاعدة البيانات (مستخدمين) ==========
+
+# =============================================================================
+# القسم 4: دوال قاعدة البيانات (خاصة بجدول users_poets_bot)
+# =============================================================================
 
 def get_or_create_user(user_id, first_name, username, language_code):
     """إنشاء أو تحديث مستخدم في جدول users_poets_bot"""
@@ -147,6 +162,7 @@ def get_or_create_user(user_id, first_name, username, language_code):
         logger.error(f"Error in get_or_create_user: {e}")
         return None
 
+
 def get_user_usage(user_id):
     """الحصول على استخدامات المستخدم للبوت الحالي"""
     try:
@@ -158,8 +174,9 @@ def get_user_usage(user_id):
         logger.error(f"Error getting user usage: {e}")
         return None
 
+
 def increment_usage(user_id):
-    """زيادة عدد استخدامات المستخدم (للمجاني والمميز على حد سواء)"""
+    """زيادة عدد استخدامات المستخدم"""
     try:
         user = get_user_info(user_id)
         if not user:
@@ -200,8 +217,9 @@ def increment_usage(user_id):
         logger.error(f"Error incrementing usage: {e}")
         return False
 
+
 def can_search(user_id):
-    """التحقق مما إذا كان المستخدم يمكنه البحث (الحد اليومي للمجانيين فقط)"""
+    """التحقق مما إذا كان المستخدم يمكنه البحث"""
     user = get_user_info(user_id)
     if not user:
         return True, 0
@@ -222,6 +240,7 @@ def can_search(user_id):
     
     return True, daily_uses
 
+
 def get_user_info(user_id):
     """الحصول على معلومات المستخدم"""
     try:
@@ -232,6 +251,7 @@ def get_user_info(user_id):
     except Exception as e:
         logger.error(f"Error getting user info: {e}")
         return None
+
 
 def update_user_status(user_id, status, days=36500):
     """تحديث حالة المستخدم (مدى الحياة افتراضياً)"""
@@ -249,8 +269,9 @@ def update_user_status(user_id, status, days=36500):
         logger.error(f"Error updating user status: {e}")
         return False
 
+
 def get_remaining_uses(user_id):
-    """الحصول على عدد الاستخدامات المتبقية للمستخدم (للمجانيين فقط)"""
+    """الحصول على عدد الاستخدامات المتبقية للمستخدم"""
     can_dl, current_uses = can_search(user_id)
     if not can_dl:
         return 0
@@ -261,10 +282,12 @@ def get_remaining_uses(user_id):
     
     return FREE_LIMIT - current_uses
 
+
 def get_total_uses(user_id):
-    """الحصول على إجمالي استخدامات المستخدم (للمميزين)"""
+    """الحصول على إجمالي استخدامات المستخدم"""
     usage = get_user_usage(user_id)
     return usage.get('total_uses', 0) if usage else 0
+
 
 def get_all_users():
     """جلب جميع المستخدمين مع إحصائيات استخداماتهم"""
@@ -286,6 +309,7 @@ def get_all_users():
     except Exception as e:
         logger.error(f"Error getting all users: {e}")
         return []
+
 
 def get_statistics():
     """الحصول على إحصائيات عامة"""
@@ -323,6 +347,7 @@ def get_statistics():
             'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 
+
 def get_daily_usage_last_7_days():
     """الحصول على الاستخدامات اليومية لآخر 7 أيام"""
     try:
@@ -344,6 +369,7 @@ def get_daily_usage_last_7_days():
         logger.error(f"Error getting daily usage: {e}")
         return ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'], [0, 0, 0, 0, 0, 0, 0]
 
+
 def send_admin_notification(user_data, query=None, song_name=None):
     """إرسال إشعار للمدير"""
     try:
@@ -351,7 +377,7 @@ def send_admin_notification(user_data, query=None, song_name=None):
         time_str = now.strftime('%H:%M')
         date_str = now.strftime('%Y/%m/%d')
         
-        message = f"🔔 <b>نشاط بوت الشعراء</b>\n\n"
+        message = f"🔔 <b>نشاط بوت كلمات و شعراء</b>\n\n"
         message += f"👤 <b>المستخدم:</b> {escape_html(user_data['first_name'])}\n"
         message += f"🆔 <b>المعرف:</b> <code>{user_data['user_id']}</code>\n"
         message += f"📱 <b>اليوزر:</b> {escape_html(user_data['username'])}\n"
@@ -363,7 +389,7 @@ def send_admin_notification(user_data, query=None, song_name=None):
         if song_name:
             message += f"🎵 <b>النتيجة:</b> {escape_html(song_name)}\n"
         
-        message += f"\n📊 <b>البوت:</b> بوت الشعراء"
+        message += f"\n📊 <b>البوت:</b> كلمات و شعراء"
         
         import requests
         api_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -372,7 +398,10 @@ def send_admin_notification(user_data, query=None, song_name=None):
     except Exception as e:
         logger.error(f"Error sending admin notification: {e}")
 
-# ========== دوال البحث المتقدم ==========
+
+# =============================================================================
+# القسم 5: دوال البحث المتقدم
+# =============================================================================
 
 def search_multiple_songs(query):
     """البحث عن أغاني وإرجاع قائمة بالنتائج مرتبة حسب الأفضلية"""
@@ -417,6 +446,7 @@ def search_multiple_songs(query):
         logger.error(f"Error in search_multiple_songs: {e}")
         return []
 
+
 def format_search_results(results):
     """تنسيق نتائج البحث المتعدد"""
     if not results:
@@ -437,6 +467,7 @@ def format_search_results(results):
     
     text += "\n📝 <b>أدخل رقم الأغنية المطلوبة (1-5):</b>"
     return text
+
 
 def format_single_response(song, user_id=None):
     """تنسيق رد الأغنية الواحدة (رسالة + ملف منفصل)"""
@@ -484,26 +515,33 @@ def format_single_response(song, user_id=None):
     
     return message, (file_content, filename)
 
-# ========== لوحات المفاتيح ==========
+
+# =============================================================================
+# القسم 6: لوحات المفاتيح (Keyboard Menus)
+# =============================================================================
 
 def get_main_keyboard():
-    """لوحة المفاتيح الرئيسية"""
+    """لوحة المفاتيح الرئيسية - تحتوي على أزرار القناة والمجموعة"""
     keyboard = [
         [KeyboardButton("🎲 اقتراح عشوائي"), KeyboardButton("🏠 الرئيسية")],
         [KeyboardButton("🔍 بحث متقدم"), KeyboardButton("ℹ️ المساعدة")],
-        [KeyboardButton("💎 اشتراك مميز")]
+        [KeyboardButton("💎 اشتراك مميز"), KeyboardButton("📢 القناة"), KeyboardButton("💬 المجموعة")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
 
 def get_help_keyboard():
     """لوحة مفاتيح المساعدة"""
     keyboard = [
         [KeyboardButton("🏠 الرئيسية"), KeyboardButton("🎲 اقتراح عشوائي")],
-        [KeyboardButton("💎 اشتراك مميز")]
+        [KeyboardButton("💎 اشتراك مميز"), KeyboardButton("📢 القناة"), KeyboardButton("💬 المجموعة")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# ========== أوامر البوت ==========
+
+# =============================================================================
+# القسم 7: أوامر البوت (Bot Commands)
+# =============================================================================
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """رسالة الترحيب"""
@@ -530,7 +568,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         usage_text = f"📊 <b>المتبقي اليوم:</b> {remaining_text}"
     
     welcome_text = f"""
-🎵 <b>مرحباً بك {first_name} في بوت كلمات الأغاني والأناشيد!</b>
+🎵 <b>مرحباً بك {first_name} في بوت كلمات و شعراء!</b>
 
 📢 <b>قناة البوت:</b> <a href="{CHANNEL_URL}">@poets_words</a>
 💬 <b>مجموعة النقاش:</b> <a href="{GROUP_URL}">@poetswords</a>
@@ -553,6 +591,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 👨‍💻 <b>للمساعدة:</b> /help
 """
     await update.message.reply_text(welcome_text, parse_mode='HTML', reply_markup=get_main_keyboard())
+
 
 async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """إحصائيات المستخدم الشخصية"""
@@ -582,13 +621,12 @@ async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
+
 async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """معلومات الاشتراك المميز - مع رابط صفحة الدفع"""
+    """معلومات الاشتراك المميز - مع فتح WebApp"""
     user_id = update.effective_user.id
     user_info = get_user_info(user_id)
     
-    # الحصول على رابط التطبيق الحالي (من البيئة أو افتراضي)
-    APP_URL = os.environ.get('APP_URL', 'https://poets-words-bot.onrender.com')
     PAYMENT_URL = f"{APP_URL}/payment-poets"
     
     if user_info and user_info['status'] == 'premium':
@@ -615,7 +653,7 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         remaining = get_remaining_uses(user_id)
         text = f"""
-💎 <b>الاشتراك المميز - بوت الشعراء</b>
+💎 <b>الاشتراك المميز - كلمات و شعراء</b>
 
 🎁 <b>مميزات الخطة المميزة:</b>
 • ✅ بحث غير محدود
@@ -631,11 +669,12 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🔽 <b>للاشتراك المميز، اضغط على الزر أدناه:</b>
 """
-        # تغيير الرابط من HUB_BOT_URL إلى صفحة الدفع الخاصة بالبوت
+        # استخدام WebAppInfo لفتح الصفحة داخل تليجرام
         keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", web_app=WebAppInfo(url=PAYMENT_URL))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """تعليمات المساعدة"""
@@ -645,7 +684,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total = get_total_uses(user_id) if user_info else 0
     
     help_text = f"""
-🆘 <b>مساعدة بوت كلمات الأغاني والأناشيد</b>
+🆘 <b>مساعدة بوت كلمات و شعراء</b>
 
 🔹 <b>للبحث عن أغنية:</b>
 • اكتب اسم الأغنية
@@ -655,8 +694,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔹 <b>اقتراح عشوائي:</b>
 • اضغط على زر 🎲 اقتراح عشوائي
 
-🔹 <b>البحث المتقدم:</b>
-• ابحث عن أغاني حسب الفئة (أغاني، أناشيد، زوامل، قصائد)
+🔹 <b>القناة والمجموعة:</b>
+• اضغط على زر 📢 القناة للانضمام
+• اضغط على زر 💬 المجموعة للمشاركة
 
 💰 <b>نظام الاستخدام:</b>
 • الخطة المجانية: {FREE_LIMIT} بحث يومياً
@@ -681,10 +721,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     await update.message.reply_text(help_text, parse_mode='HTML', reply_markup=get_help_keyboard())
 
+
 async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """اقتراح أغنية عشوائية"""
     user_id = update.effective_user.id
     user_info = get_user_info(user_id)
+    PAYMENT_URL = f"{APP_URL}/payment-poets"
     
     can_search_bool, current_uses = can_search(user_id)
     
@@ -741,11 +783,12 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     send_admin_notification(user_data, song_name=song.get('name'))
 
+
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معلومات عن البوت"""
     stats = db.get_statistics()
     about_text = f"""
-🎵 <b>بوت كلمات الأغاني والأناشيد - بوت الشعراء</b> 🎵
+🎵 <b>بوت كلمات و شعراء</b> 🎵
 
 📖 <b>الإصدار:</b> 2.0 (بوت تلجرام)
 
@@ -774,12 +817,13 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     await update.message.reply_text(about_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
+
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """إحصائيات البوت"""
     stats = db.get_statistics()
     if stats:
         stats_text = f"""
-📊 <b>إحصائيات بوت الشعراء</b>
+📊 <b>إحصائيات بوت كلمات و شعراء</b>
 
 📚 <b>إجمالي الأغاني:</b> {stats['total']}
 📝 <b>بها كلمات:</b> {stats['with_lyrics']}
@@ -796,6 +840,33 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("❌ لم أتمكن من جلب الإحصائيات حالياً.", reply_markup=get_main_keyboard())
 
+
+async def channel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """إرسال رابط القناة"""
+    keyboard = [[InlineKeyboardButton("📢 اضغط للانضمام للقناة", url=CHANNEL_URL)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "📢 <b>قناة بوت كلمات و شعراء</b>\n\n"
+        "انضم للقناة ليصلك كل جديد:\n"
+        f"<a href='{CHANNEL_URL}'>@poets_words</a>",
+        parse_mode='HTML',
+        reply_markup=reply_markup
+    )
+
+
+async def group_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """إرسال رابط المجموعة"""
+    keyboard = [[InlineKeyboardButton("💬 اضغط للانضمام للمجموعة", url=GROUP_URL)]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "💬 <b>مجموعة نقاش بوت كلمات و شعراء</b>\n\n"
+        "انضم للمجموعة للمناقشة والاقتراحات:\n"
+        f"<a href='{GROUP_URL}'>@poetswords</a>",
+        parse_mode='HTML',
+        reply_markup=reply_markup
+    )
+
+
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة الأزرار"""
     query = update.callback_query
@@ -804,10 +875,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "main_menu":
         await start_command(update, context)
 
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة رسائل المستخدم"""
     text = update.message.text.strip()
     user_id = update.effective_user.id
+    PAYMENT_URL = f"{APP_URL}/payment-poets"
     
     # معالجة الأزرار
     if text == "🎲 اقتراح عشوائي":
@@ -841,6 +914,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif text == "/mystats":
         await my_stats_command(update, context)
+        return
+    
+    elif text == "📢 القناة":
+        await channel_command(update, context)
+        return
+    
+    elif text == "💬 المجموعة":
+        await group_command(update, context)
         return
     
     # التحقق مما إذا كان المستخدم يختار من نتائج البحث
@@ -954,51 +1035,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results_text = format_search_results(results)
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
-# ========== مسارات Flask (لوحة التحكم وصفحة الدفع) ==========
-@app.route('/debug-paths')
-def debug_paths():
-    """تصحيح مسارات الملفات"""
-    import os
-    result = []
-    result.append(f"BASE_DIR: {BASE_DIR}")
-    result.append(f"TEMPLATE_DIR: {TEMPLATE_DIR}")
-    result.append(f"TEMPLATE_DIR exists: {os.path.exists(TEMPLATE_DIR)}")
-    if os.path.exists(TEMPLATE_DIR):
-        result.append(f"Files: {os.listdir(TEMPLATE_DIR)}")
-    result.append(f"Current directory: {os.getcwd()}")
-    result.append(f"Files in current dir: {os.listdir('.')}")
-    return "<br>".join(result)
-    
-@app.route('/list-templates')
-def list_templates():
-    """عرض محتويات مجلد templates"""
-    import os
-    template_dir = "/opt/render/project/src/templates"
-    if os.path.exists(template_dir):
-        files = os.listdir(template_dir)
-        return f"Files in templates: {files}"
-    return "Templates folder not found"
-    
-@app.route('/test')
-def test():
-    """Route تجريبي لاختبار عمل Flask"""
-    return "✅ Flask is working! Templates path: " + TEMPLATE_DIR
 
-    
+# =============================================================================
+# القسم 8: مسارات Flask (لوحة التحكم وصفحة الدفع)
+# =============================================================================
+
 @app.route('/')
 def index():
     """الصفحة الرئيسية - بوابة البوت"""
     return render_template('index_poets.html', free_limit=FREE_LIMIT)
 
+
 @app.route('/health')
 @app.route('/healthcheck')
 def health():
-    """صحة الخادم"""
+    """صحة الخادم - لخدمات المراقبة"""
     return "OK", 200
+
 
 @app.route('/sync', methods=['GET', 'POST'])
 def sync_endpoint():
-    """Endpoint للمزامنة اليدوية"""
+    """Endpoint للمزامنة اليدوية مع Google Sheets"""
     auth_key = request.args.get('key')
     if auth_key != os.environ.get('SYNC_KEY', 'sync2024'):
         return '❌ مفتاح غير صحيح', 401
@@ -1022,9 +1079,10 @@ def sync_endpoint():
     except Exception as e:
         return f"❌ خطأ: {e}", 500
 
+
 @app.route('/admin-poets')
 def admin_poets():
-    """لوحة تحكم بوت الشعراء"""
+    """لوحة تحكم بوت كلمات و شعراء"""
     password = request.args.get('password', '')
     if password != ADMIN_PASSWORD:
         return '''
@@ -1040,7 +1098,7 @@ def admin_poets():
         </style></head>
         <body>
             <div class="login-box">
-                <h2>🔐 لوحة تحكم بوت الشعراء</h2>
+                <h2>🔐 لوحة تحكم بوت كلمات و شعراء</h2>
                 <form method="get">
                     <input type="password" name="password" placeholder="كلمة المرور" autocomplete="off">
                     <br>
@@ -1062,26 +1120,27 @@ def admin_poets():
                           daily_labels=daily_labels,
                           daily_data=daily_data)
 
+
 @app.route('/payment-poets')
 def payment_poets():
-    """صفحة الدفع - HTML مباشر بدون templates"""
-    html_content = '''<!DOCTYPE html>
+    """صفحة الدفع - HTML مباشر (يفتح كـ WebApp داخل تليجرام)"""
+    html_content = f'''<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>الاشتراك المميز - بوت الشعراء</title>
+    <title>الاشتراك المميز - بوت كلمات و شعراء</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
             font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
             background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             min-height: 100vh;
             padding: 20px;
             color: #fff;
-        }
-        .container { max-width: 550px; margin: 0 auto; }
-        .card {
+        }}
+        .container {{ max-width: 550px; margin: 0 auto; }}
+        .card {{
             background: rgba(255,255,255,0.1);
             backdrop-filter: blur(15px);
             border-radius: 30px;
@@ -1089,17 +1148,17 @@ def payment_poets():
             margin-bottom: 20px;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.2);
-        }
-        .bot-icon { font-size: 4rem; margin-bottom: 10px; }
-        h1 { 
+        }}
+        .bot-icon {{ font-size: 4rem; margin-bottom: 10px; }}
+        h1 {{ 
             background: linear-gradient(135deg, #e94560, #ff6b6b);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
             font-size: 1.8em;
             margin-bottom: 10px;
-        }
-        .price { 
+        }}
+        .price {{ 
             font-size: 3em; 
             background: linear-gradient(135deg, #ff6b6b, #e94560);
             -webkit-background-clip: text;
@@ -1107,48 +1166,48 @@ def payment_poets():
             color: transparent;
             margin: 15px 0;
             font-weight: bold;
-        }
-        .price small { font-size: 0.4em; color: #aaa; }
-        .features {
+        }}
+        .price small {{ font-size: 0.4em; color: #aaa; }}
+        .features {{
             text-align: right;
             margin: 20px 0;
             background: rgba(0,0,0,0.3);
             border-radius: 20px;
             padding: 20px;
-        }
-        .features h3 { color: #ff6b6b; margin-bottom: 15px; text-align: center; }
-        .feature-item {
+        }}
+        .features h3 {{ color: #ff6b6b; margin-bottom: 15px; text-align: center; }}
+        .feature-item {{
             display: flex;
             align-items: center;
             gap: 10px;
             padding: 8px 0;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .feature-item:last-child { border-bottom: none; }
-        .feature-icon { font-size: 1.2rem; }
-        .feature-text { flex: 1; font-size: 0.95em; }
-        .badge {
+        }}
+        .feature-item:last-child {{ border-bottom: none; }}
+        .feature-icon {{ font-size: 1.2rem; }}
+        .feature-text {{ flex: 1; font-size: 0.95em; }}
+        .badge {{
             background: linear-gradient(135deg, #e94560, #ff6b6b);
             color: white;
             padding: 3px 10px;
             border-radius: 20px;
             font-size: 0.75em;
-        }
-        .payment-methods {
+        }}
+        .payment-methods {{
             background: rgba(0,0,0,0.3);
             border-radius: 20px;
             padding: 15px;
             margin: 15px 0;
-        }
-        .method {
+        }}
+        .method {{
             display: inline-block;
             background: rgba(255,255,255,0.1);
             padding: 6px 12px;
             border-radius: 20px;
             margin: 4px;
             font-size: 0.85em;
-        }
-        .number {
+        }}
+        .number {{
             font-size: 1.8em;
             font-weight: bold;
             background: linear-gradient(135deg, #ff6b6b, #e94560);
@@ -1163,8 +1222,8 @@ def payment_poets():
             text-align: center;
             letter-spacing: 2px;
             font-family: monospace;
-        }
-        .copy-btn {
+        }}
+        .copy-btn {{
             background: linear-gradient(135deg, #e94560, #ff6b6b);
             color: white;
             border: none;
@@ -1174,8 +1233,8 @@ def payment_poets():
             font-size: 1em;
             margin: 10px 0;
             font-weight: 500;
-        }
-        .warning {
+        }}
+        .warning {{
             background: rgba(255,193,7,0.2);
             border-right: 4px solid #ffc107;
             padding: 12px;
@@ -1184,8 +1243,8 @@ def payment_poets():
             text-align: right;
             color: #ffc107;
             font-size: 0.85em;
-        }
-        .button {
+        }}
+        .button {{
             display: inline-block;
             background: linear-gradient(135deg, #e94560, #ff6b6b);
             color: white;
@@ -1194,11 +1253,11 @@ def payment_poets():
             text-decoration: none;
             margin: 8px;
             font-size: 0.95em;
-        }
-        .back-btn { background: rgba(255,255,255,0.2); }
-        .footer { text-align: center; margin-top: 20px; padding: 15px; color: #aaa; font-size: 0.7rem; }
-        .footer a { color: #ff6b6b; text-decoration: none; }
-        .toast {
+        }}
+        .back-btn {{ background: rgba(255,255,255,0.2); }}
+        .footer {{ text-align: center; margin-top: 20px; padding: 15px; color: #aaa; font-size: 0.7rem; }}
+        .footer a {{ color: #ff6b6b; text-decoration: none; }}
+        .toast {{
             visibility: hidden;
             min-width: 200px;
             background: linear-gradient(135deg, #e94560, #ff6b6b);
@@ -1212,25 +1271,25 @@ def payment_poets():
             transform: translateX(-50%);
             z-index: 100;
             font-size: 0.9em;
-        }
-        .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        }}
+        .toast.show {{ visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }}
+        @keyframes fadein {{ from {{bottom: 0; opacity: 0;}} to {{bottom: 30px; opacity: 1;}} }}
+        @keyframes fadeout {{ from {{bottom: 30px; opacity: 1;}} to {{bottom: 0; opacity: 0;}} }}
         
-        @media (max-width: 500px) {
-            .container { padding: 10px; }
-            .card { padding: 20px 15px; }
-            .number { font-size: 1.3em; }
-            .price { font-size: 2.2em; }
-            .feature-text { font-size: 0.85em; }
-        }
+        @media (max-width: 500px) {{
+            .container {{ padding: 10px; }}
+            .card {{ padding: 20px 15px; }}
+            .number {{ font-size: 1.3em; }}
+            .price {{ font-size: 2.2em; }}
+            .feature-text {{ font-size: 0.85em; }}
+        }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
             <div class="bot-icon">🎵</div>
-            <h1>بوت الشعراء</h1>
+            <h1>بوت كلمات و شعراء</h1>
             <div class="price">$10 <small>مدى الحياة</small></div>
             
             <div class="features">
@@ -1265,7 +1324,7 @@ def payment_poets():
             
             <div class="footer">
                 <p>📢 قناة البوت: <a href="https://t.me/poets_words">@poets_words</a> | 💬 مجموعة النقاش: <a href="https://t.me/poetswords">@poetswords</a></p>
-                <p>✨ الخطة المجانية: ''' + str(FREE_LIMIT) + ''' بحث يومياً</p>
+                <p>✨ الخطة المجانية: {FREE_LIMIT} بحث يومياً</p>
             </div>
         </div>
     </div>
@@ -1273,27 +1332,27 @@ def payment_poets():
     <div id="toast" class="toast">✅ تم نسخ الرقم!</div>
     
     <script>
-        function copyNumber() {
+        function copyNumber() {{
             var number = document.getElementById("paymentNumber").innerText;
             navigator.clipboard.writeText(number);
             var toast = document.getElementById("toast");
             toast.className = "toast show";
-            setTimeout(function(){ toast.className = "toast"; }, 3000);
-        }
+            setTimeout(function(){{ toast.className = "toast"; }}, 3000);
+        }}
         
-        // دعم WebApp في تليجرام
-        if (window.Telegram && window.Telegram.WebApp) {
+        if (window.Telegram && window.Telegram.WebApp) {{
             window.Telegram.WebApp.ready();
             window.Telegram.WebApp.expand();
-        }
+        }}
     </script>
 </body>
 </html>'''
     return html_content
 
+
 @app.route('/upgrade-user-poets', methods=['POST'])
 def upgrade_user_poets():
-    """ترقية مستخدم"""
+    """ترقية مستخدم من لوحة التحكم"""
     user_id = request.form.get('user_id')
     if user_id:
         try:
@@ -1304,9 +1363,10 @@ def upgrade_user_poets():
             pass
     return redirect(url_for('admin_poets', password=ADMIN_PASSWORD))
 
+
 @app.route('/downgrade-user-poets', methods=['POST'])
 def downgrade_user_poets():
-    """خفض مستخدم"""
+    """خفض مستخدم من لوحة التحكم"""
     user_id = request.form.get('user_id')
     if user_id:
         try:
@@ -1317,33 +1377,29 @@ def downgrade_user_poets():
             pass
     return redirect(url_for('admin_poets', password=ADMIN_PASSWORD))
 
+
 @app.route('/api/poets-stats')
 def api_poets_stats():
-    """API لإحصائيات البوت"""
+    """API لإحصائيات البوت (للاستخدام الخارجي)"""
     stats = get_statistics()
     return jsonify(stats)
 
+
 @app.route('/api/poets-users')
 def api_poets_users():
-    """API لقائمة المستخدمين"""
+    """API لقائمة المستخدمين (للاستخدام الخارجي)"""
     users = get_all_users()
     for user in users:
         user.pop('language_code', None)
     return jsonify(users)
 
-# ========== تشغيل Flask في Thread منفصل ==========
 
-def run_flask():
-    """تشغيل خادم Flask"""
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+# =============================================================================
+# القسم 9: تشغيل الخادم (Flask + Telegram Bot)
+# =============================================================================
 
-# بدء تشغيل Flask في thread منفصل
-threading.Thread(target=run_flask, daemon=True).start()
-
-# ========== الدالة الرئيسية لتشغيل البوت ==========
-
-def main():
-    """تشغيل البوت"""
+def run_telegram_bot():
+    """تشغيل بوت تلجرام في thread منفصل"""
     application = Application.builder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start_command))
@@ -1357,8 +1413,8 @@ def main():
     application.add_handler(CallbackQueryHandler(button_callback))
     
     print("="*60)
-    print("🎵 بوت الشعراء - نسخة متكاملة مع لوحة تحكم")
-    print("🤖 @poets_words_bot")
+    print("🎵 بوت كلمات و شعراء - نسخة متكاملة مع لوحة تحكم")
+    print("🤖 @kalimat_ws_shoara_bot")
     print("📢 قناة البوت: @poets_words")
     print("💬 مجموعة النقاش: @poetswords")
     print(f"🌐 خادم الويب على المنفذ: {PORT}")
@@ -1370,5 +1426,12 @@ def main():
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
+
 if __name__ == '__main__':
-    main()
+    # بدء تشغيل البوت في thread منفصل
+    bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
+    bot_thread.start()
+    
+    # تشغيل Flask كخادم رئيسي
+    print(f"🚀 بدء تشغيل خادم الويب على المنفذ {PORT}...")
+    app.run(host='0.0.0.0', port=PORT, debug=False)
