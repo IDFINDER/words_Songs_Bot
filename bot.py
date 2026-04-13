@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Poets Words Bot - Premium Version with Supabase
-بوت كلمات الأغاني والأناشيد - بوت الشعراء
+Poets Words Bot - Premium Version with Supabase + Web Dashboard
+بوت كلمات الأغاني والأناشيد - بوت الشعراء (نسخة متكاملة مع لوحة تحكم)
 """
 
 import os
@@ -10,9 +10,9 @@ import logging
 import threading
 import re
 from datetime import datetime, date, timedelta
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from flask import Flask, request, render_template, redirect, url_for, jsonify
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from flask import Flask, request
 
 # إضافة مجلد utils إلى المسار
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -41,48 +41,10 @@ def clean_filename(text):
     text = re.sub(r'_+', '_', text)
     return text[:50]
 
-# ========== Flask Health Check ==========
+# ========== إعدادات Flask ==========
 app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'poets_words_secret_key_2024')
 PORT = int(os.environ.get('PORT', 10000))
-
-@app.route('/')
-@app.route('/health')
-@app.route('/healthcheck')
-def health():
-    return "OK", 200
-
-# ========== Endpoint للمزامنة ==========
-@app.route('/sync', methods=['GET', 'POST'])
-def sync_endpoint():
-    """Endpoint للمزامنة اليدوية أو التلقائية"""
-    auth_key = request.args.get('key')
-    if auth_key != os.environ.get('SYNC_KEY', 'sync2024'):
-        return '❌ مفتاح غير صحيح', 401
-    
-    try:
-        import subprocess
-        result = subprocess.run(
-            [sys.executable, 'sync_songs.py'],
-            capture_output=True,
-            text=True,
-            timeout=300
-        )
-        
-        if result.returncode == 0:
-            return f"✅ تمت المزامنة بنجاح!\n\n{result.stdout}", 200
-        else:
-            return f"❌ فشلت المزامنة!\n\n{result.stderr}", 500
-            
-    except subprocess.TimeoutExpired:
-        return "⏰ انتهى وقت المزامنة (5 دقائق)", 408
-    except Exception as e:
-        return f"❌ خطأ: {e}", 500
-
-def run_flask():
-    app.run(host='0.0.0.0', port=PORT, debug=False)
-
-threading.Thread(target=run_flask, daemon=True).start()
-# =========================================
 
 # ========== متغيرات البيئة ==========
 TOKEN = os.environ.get('TELEGRAM_TOKEN')
@@ -94,6 +56,7 @@ HUB_BOT_URL = os.environ.get('HUB_BOT_URL', 'https://t.me/SocMed_tools_bot')
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID', '7850462368')
 CHANNEL_URL = os.environ.get('CHANNEL_URL', 'https://t.me/poets_words')
 GROUP_URL = os.environ.get('GROUP_URL', 'https://t.me/poetswords')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
 if not TOKEN or not SUPABASE_URL or not SUPABASE_KEY:
     print("❌ خطأ: تأكد من تعيين المتغيرات المطلوبة")
@@ -255,13 +218,15 @@ def get_user_info(user_id):
         logger.error(f"Error getting user info: {e}")
         return None
 
-def update_user_status(user_id, status, days=30):
-    """تحديث حالة المستخدم"""
+def update_user_status(user_id, status, days=36500):
+    """تحديث حالة المستخدم (مدى الحياة افتراضياً)"""
     try:
         data = {'status': status}
         if status == 'premium':
             until_date = date.today() + timedelta(days=days)
             data['premium_until'] = until_date.isoformat()
+        else:
+            data['premium_until'] = None
         
         supabase.table('users_poets_bot').update(data).eq('user_id', user_id).execute()
         return True
@@ -285,6 +250,84 @@ def get_total_uses(user_id):
     """الحصول على إجمالي استخدامات المستخدم (للمميزين)"""
     usage = get_user_usage(user_id)
     return usage.get('total_uses', 0) if usage else 0
+
+def get_all_users():
+    """جلب جميع المستخدمين مع إحصائيات استخداماتهم"""
+    try:
+        response = supabase.table('users_poets_bot').select('*').execute()
+        users = response.data if response.data else []
+        
+        usage_response = supabase.table('bot_usage_poets_bot').select('*').eq('bot_name', BOT_NAME).execute()
+        usage_map = {}
+        for usage in (usage_response.data or []):
+            usage_map[usage['user_id']] = usage
+        
+        for user in users:
+            usage = usage_map.get(user['user_id'], {})
+            user['daily_uses'] = usage.get('daily_uses', 0)
+            user['total_uses'] = usage.get('total_uses', 0)
+        
+        return users
+    except Exception as e:
+        logger.error(f"Error getting all users: {e}")
+        return []
+
+def get_statistics():
+    """الحصول على إحصائيات عامة"""
+    try:
+        users_response = supabase.table('users_poets_bot').select('*').execute()
+        users = users_response.data or []
+        
+        total_users = len(users)
+        premium_users = sum(1 for u in users if u.get('status') == 'premium')
+        free_users = total_users - premium_users
+        
+        usage_response = supabase.table('bot_usage_poets_bot').select('*').eq('bot_name', BOT_NAME).execute()
+        usages = usage_response.data or []
+        total_searches = sum(u.get('total_uses', 0) for u in usages)
+        
+        songs_response = supabase.table('songs').select('count', count='exact').execute()
+        total_songs = songs_response.count if hasattr(songs_response, 'count') else 0
+        
+        return {
+            'total_users': total_users,
+            'premium_users': premium_users,
+            'free_users': free_users,
+            'total_searches': total_searches,
+            'total_songs': total_songs,
+            'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+    except Exception as e:
+        logger.error(f"Error getting statistics: {e}")
+        return {
+            'total_users': 0,
+            'premium_users': 0,
+            'free_users': 0,
+            'total_searches': 0,
+            'total_songs': 0,
+            'last_update': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+def get_daily_usage_last_7_days():
+    """الحصول على الاستخدامات اليومية لآخر 7 أيام"""
+    try:
+        labels = []
+        data = []
+        today = date.today()
+        day_names = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة']
+        
+        for i in range(6, -1, -1):
+            target_date = today - timedelta(days=i)
+            labels.append(day_names[target_date.weekday()])
+            
+            response = supabase.table('bot_usage_poets_bot').select('daily_uses').eq('bot_name', BOT_NAME).eq('last_use_date', target_date.isoformat()).execute()
+            daily_total = sum(u.get('daily_uses', 0) for u in (response.data or []))
+            data.append(daily_total)
+        
+        return labels, data
+    except Exception as e:
+        logger.error(f"Error getting daily usage: {e}")
+        return ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'], [0, 0, 0, 0, 0, 0, 0]
 
 def send_admin_notification(user_data, query=None, song_name=None):
     """إرسال إشعار للمدير"""
@@ -392,7 +435,6 @@ def format_single_response(song, user_id=None):
     youtube_url = song.get('youtube_url', '')
     lyrics = song.get('lyrics', '')
     
-    # بناء الرسالة (أول 200 حرف)
     lyrics_preview = lyrics[:200] + ('...' if len(lyrics) > 200 else '') if lyrics else 'لا توجد كلمات متاحة'
     lyrics_preview = escape_html(lyrics_preview)
     
@@ -415,10 +457,8 @@ def format_single_response(song, user_id=None):
     
     message += f"\n\n📎 <b>الكلمات الكاملة في الملف المرفق</b>"
     
-    # بناء الملف النصي
     file_content = build_text_file(song)
     
-    # اسم الملف
     if artist:
         clean_artist = clean_filename(artist)
         clean_name = clean_filename(song_name)
@@ -891,7 +931,140 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results_text = format_search_results(results)
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
-# ========== الدالة الرئيسية ==========
+# ========== مسارات Flask (لوحة التحكم وصفحة الدفع) ==========
+
+@app.route('/')
+def index():
+    """الصفحة الرئيسية - بوابة البوت"""
+    return render_template('index_poets.html', free_limit=FREE_LIMIT)
+
+@app.route('/health')
+@app.route('/healthcheck')
+def health():
+    """صحة الخادم"""
+    return "OK", 200
+
+@app.route('/sync', methods=['GET', 'POST'])
+def sync_endpoint():
+    """Endpoint للمزامنة اليدوية"""
+    auth_key = request.args.get('key')
+    if auth_key != os.environ.get('SYNC_KEY', 'sync2024'):
+        return '❌ مفتاح غير صحيح', 401
+    
+    try:
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, 'sync_songs.py'],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode == 0:
+            return f"✅ تمت المزامنة بنجاح!\n\n{result.stdout}", 200
+        else:
+            return f"❌ فشلت المزامنة!\n\n{result.stderr}", 500
+            
+    except subprocess.TimeoutExpired:
+        return "⏰ انتهى وقت المزامنة (5 دقائق)", 408
+    except Exception as e:
+        return f"❌ خطأ: {e}", 500
+
+@app.route('/admin-poets')
+def admin_poets():
+    """لوحة تحكم بوت الشعراء"""
+    password = request.args.get('password', '')
+    if password != ADMIN_PASSWORD:
+        return '''
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head><title>تسجيل الدخول</title>
+        <style>
+            body{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:white;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;}
+            .login-box{background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;text-align:center;backdrop-filter:blur(10px);}
+            input{padding:10px;margin:10px;border-radius:10px;border:none;width:200px;}
+            button{background:#e94560;color:white;padding:10px 20px;border:none;border-radius:10px;cursor:pointer;}
+            h2{margin-bottom:20px;}
+        </style></head>
+        <body>
+            <div class="login-box">
+                <h2>🔐 لوحة تحكم بوت الشعراء</h2>
+                <form method="get">
+                    <input type="password" name="password" placeholder="كلمة المرور" autocomplete="off">
+                    <br>
+                    <button type="submit">دخول</button>
+                </form>
+            </div>
+        </body>
+        </html>
+        '''
+    
+    users = get_all_users()
+    stats = get_statistics()
+    daily_labels, daily_data = get_daily_usage_last_7_days()
+    
+    return render_template('admin_poets.html', 
+                          users=users, 
+                          stats=stats, 
+                          free_limit=FREE_LIMIT,
+                          daily_labels=daily_labels,
+                          daily_data=daily_data)
+
+@app.route('/payment-poets')
+def payment_poets():
+    """صفحة الدفع لبوت الشعراء"""
+    return render_template('payment_poets.html', free_limit=FREE_LIMIT)
+
+@app.route('/upgrade-user-poets', methods=['POST'])
+def upgrade_user_poets():
+    """ترقية مستخدم"""
+    user_id = request.form.get('user_id')
+    if user_id:
+        try:
+            user_id_int = int(user_id)
+            if update_user_status(user_id_int, 'premium'):
+                return redirect(url_for('admin_poets', password=ADMIN_PASSWORD))
+        except ValueError:
+            pass
+    return redirect(url_for('admin_poets', password=ADMIN_PASSWORD))
+
+@app.route('/downgrade-user-poets', methods=['POST'])
+def downgrade_user_poets():
+    """خفض مستخدم"""
+    user_id = request.form.get('user_id')
+    if user_id:
+        try:
+            user_id_int = int(user_id)
+            if update_user_status(user_id_int, 'free'):
+                return redirect(url_for('admin_poets', password=ADMIN_PASSWORD))
+        except ValueError:
+            pass
+    return redirect(url_for('admin_poets', password=ADMIN_PASSWORD))
+
+@app.route('/api/poets-stats')
+def api_poets_stats():
+    """API لإحصائيات البوت"""
+    stats = get_statistics()
+    return jsonify(stats)
+
+@app.route('/api/poets-users')
+def api_poets_users():
+    """API لقائمة المستخدمين"""
+    users = get_all_users()
+    for user in users:
+        user.pop('language_code', None)
+    return jsonify(users)
+
+# ========== تشغيل Flask في Thread منفصل ==========
+
+def run_flask():
+    """تشغيل خادم Flask"""
+    app.run(host='0.0.0.0', port=PORT, debug=False)
+
+# بدء تشغيل Flask في thread منفصل
+threading.Thread(target=run_flask, daemon=True).start()
+
+# ========== الدالة الرئيسية لتشغيل البوت ==========
 
 def main():
     """تشغيل البوت"""
@@ -908,14 +1081,15 @@ def main():
     application.add_handler(CallbackQueryHandler(button_callback))
     
     print("="*60)
-    print("🎵 بوت كلمات الأغاني والأناشيد - بوت الشعراء")
+    print("🎵 بوت الشعراء - نسخة متكاملة مع لوحة تحكم")
     print("🤖 @poets_words_bot")
     print("📢 قناة البوت: @poets_words")
     print("💬 مجموعة النقاش: @poetswords")
+    print(f"🌐 خادم الويب على المنفذ: {PORT}")
+    print(f"🔗 لوحة التحكم: /admin-poets?password={ADMIN_PASSWORD}")
+    print(f"💳 صفحة الدفع: /payment-poets")
     print("✅ أوامر: /start /help /about /stats /mystats /premium /random")
     print(f"✅ نظام المدفوعات: مجاني {FREE_LIMIT} بحث - مميز غير محدود")
-    print("✅ قاعدة بيانات: Supabase (جداول منفصلة: users_poets_bot, bot_usage_poets_bot)")
-    print("✅ الاشتراك عبر: @SocMed_tools_bot (سيتم تغييره لاحقاً)")
     print("="*60)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
