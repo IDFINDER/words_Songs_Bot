@@ -955,6 +955,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 # ========== مسارات Flask (لوحة التحكم وصفحة الدفع) ==========
+@app.route('/debug-paths')
+def debug_paths():
+    """تصحيح مسارات الملفات"""
+    import os
+    result = []
+    result.append(f"BASE_DIR: {BASE_DIR}")
+    result.append(f"TEMPLATE_DIR: {TEMPLATE_DIR}")
+    result.append(f"TEMPLATE_DIR exists: {os.path.exists(TEMPLATE_DIR)}")
+    if os.path.exists(TEMPLATE_DIR):
+        result.append(f"Files: {os.listdir(TEMPLATE_DIR)}")
+    result.append(f"Current directory: {os.getcwd()}")
+    result.append(f"Files in current dir: {os.listdir('.')}")
+    return "<br>".join(result)
+    
 @app.route('/list-templates')
 def list_templates():
     """عرض محتويات مجلد templates"""
