@@ -1398,8 +1398,12 @@ def api_poets_users():
 # القسم 9: تشغيل الخادم (Flask + Telegram Bot)
 # =============================================================================
 
+# =============================================================================
+# القسم 9: تشغيل الخادم (Flask + Telegram Bot)
+# =============================================================================
+
 def run_telegram_bot():
-    """تشغيل بوت تلجرام في thread منفصل"""
+    """تشغيل بوت تلجرام"""
     application = Application.builder().token(TOKEN).build()
     
     application.add_handler(CommandHandler("start", start_command))
@@ -1414,7 +1418,7 @@ def run_telegram_bot():
     
     print("="*60)
     print("🎵 بوت كلمات و شعراء - نسخة متكاملة مع لوحة تحكم")
-    print("🤖 @kalimat_ws_shoara_bot")
+    print("🤖 @poets_words_bot")
     print("📢 قناة البوت: @poets_words")
     print("💬 مجموعة النقاش: @poetswords")
     print(f"🌐 خادم الويب على المنفذ: {PORT}")
@@ -1424,14 +1428,17 @@ def run_telegram_bot():
     print(f"✅ نظام المدفوعات: مجاني {FREE_LIMIT} بحث - مميز غير محدود")
     print("="*60)
     
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # استخدام run_polling مع إعدادات مناسبة
+    application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 
 if __name__ == '__main__':
-    # بدء تشغيل البوت في thread منفصل
-    bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
-    bot_thread.start()
+    # تشغيل Flask في thread منفصل (العكس هذه المرة)
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False))
+    flask_thread.daemon = True
+    flask_thread.start()
     
-    # تشغيل Flask كخادم رئيسي
     print(f"🚀 بدء تشغيل خادم الويب على المنفذ {PORT}...")
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+    
+    # تشغيل البوت في main thread (الأساسي)
+    run_telegram_bot()
