@@ -632,7 +632,7 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔽 <b>للاشتراك المميز، اضغط على الزر أدناه:</b>
 """
         # تغيير الرابط من HUB_BOT_URL إلى صفحة الدفع الخاصة بالبوت
-        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", url=PAYMENT_URL)]]
+        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", web_app=WebAppInfo(url=PAYMENT_URL))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
@@ -689,7 +689,7 @@ async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     can_search_bool, current_uses = can_search(user_id)
     
     if not can_search_bool and user_info and user_info['status'] == 'free':
-        keyboard = [[InlineKeyboardButton("💎 اشتراك مميز", url=HUB_BOT_URL)]]
+        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", web_app=WebAppInfo(url=PAYMENT_URL))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
             f"⚠️ <b>لقد وصلت للحد اليومي!</b>\n\n"
