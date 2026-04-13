@@ -42,7 +42,22 @@ def clean_filename(text):
     return text[:50]
 
 # ========== إعدادات Flask ==========
-app = Flask(__name__)
+# ========== إعداد مسار القوالب بشكل مطلق ==========
+import os
+
+# احصل على المسار المطلق للمشروع
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
+
+# تأكد من وجود المجلد
+if os.path.exists(TEMPLATE_DIR):
+    print(f"✅ Templates folder found at: {TEMPLATE_DIR}")
+    print(f"📄 Files: {os.listdir(TEMPLATE_DIR)}")
+else:
+    print(f"❌ Templates folder NOT found at: {TEMPLATE_DIR}")
+
+# عرف Flask مع template_folder مطلق
+app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'poets_words_secret_key_2024')
 PORT = int(os.environ.get('PORT', 10000))
 
@@ -940,7 +955,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 # ========== مسارات Flask (لوحة التحكم وصفحة الدفع) ==========
+@app.route('/test')
+def test():
+    """Route تجريبي لاختبار عمل Flask"""
+    return "✅ Flask is working! Templates path: " + TEMPLATE_DIR
 
+    
 @app.route('/')
 def index():
     """الصفحة الرئيسية - بوابة البوت"""
