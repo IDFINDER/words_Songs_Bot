@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-YouTube Songs Bot - Premium Version with Supabase
-بوت كلمات الأغاني والأناشيد
+Poets Words Bot - Premium Version with Supabase
+بوت كلمات الأغاني والأناشيد - بوت الشعراء
 """
 
 import os
@@ -88,10 +88,12 @@ threading.Thread(target=run_flask, daemon=True).start()
 TOKEN = os.environ.get('TELEGRAM_TOKEN')
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
-BOT_NAME = os.environ.get('BOT_NAME', 'songs')
+BOT_NAME = os.environ.get('BOT_NAME', 'poets_words_bot')
 FREE_LIMIT = int(os.environ.get('FREE_LIMIT', '5'))
 HUB_BOT_URL = os.environ.get('HUB_BOT_URL', 'https://t.me/SocMed_tools_bot')
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID', '7850462368')
+CHANNEL_URL = os.environ.get('CHANNEL_URL', 'https://t.me/poets_words')
+GROUP_URL = os.environ.get('GROUP_URL', 'https://t.me/poetswords')
 
 if not TOKEN or not SUPABASE_URL or not SUPABASE_KEY:
     print("❌ خطأ: تأكد من تعيين المتغيرات المطلوبة")
@@ -114,14 +116,14 @@ user_search_results = {}
 # ========== دوال قاعدة البيانات (مستخدمين) ==========
 
 def get_or_create_user(user_id, first_name, username, language_code):
-    """إنشاء أو تحديث مستخدم في جدول users"""
+    """إنشاء أو تحديث مستخدم في جدول users_poets_bot"""
     try:
-        response = supabase.table('users').select('*').eq('user_id', user_id).execute()
+        response = supabase.table('users_poets_bot').select('*').eq('user_id', user_id).execute()
         
         if response.data:
             user = response.data[0]
             if user.get('first_name') != first_name or user.get('username') != username:
-                supabase.table('users').update({
+                supabase.table('users_poets_bot').update({
                     'first_name': first_name,
                     'username': username or '',
                     'language_code': language_code or ''
@@ -136,12 +138,12 @@ def get_or_create_user(user_id, first_name, username, language_code):
                 'language_code': language_code or '',
                 'status': 'free'
             }
-            response = supabase.table('users').insert(new_user).execute()
+            response = supabase.table('users_poets_bot').insert(new_user).execute()
             user = response.data[0]
         
-        usage = supabase.table('bot_usage').select('*').eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
+        usage = supabase.table('bot_usage_poets_bot').select('*').eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         if not usage.data:
-            supabase.table('bot_usage').insert({
+            supabase.table('bot_usage_poets_bot').insert({
                 'user_id': user_id,
                 'bot_name': BOT_NAME,
                 'daily_uses': 0,
@@ -170,7 +172,7 @@ def get_or_create_user(user_id, first_name, username, language_code):
 def get_user_usage(user_id):
     """الحصول على استخدامات المستخدم للبوت الحالي"""
     try:
-        response = supabase.table('bot_usage').select('*').eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
+        response = supabase.table('bot_usage_poets_bot').select('*').eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         if response.data:
             return response.data[0]
         return None
@@ -192,7 +194,7 @@ def increment_usage(user_id):
         
         if usage and usage['last_use_date'] != today:
             if user['status'] == 'free':
-                supabase.table('bot_usage').update({
+                supabase.table('bot_usage_poets_bot').update({
                     'daily_uses': 0,
                     'last_use_date': today,
                     'username': username,
@@ -200,7 +202,7 @@ def increment_usage(user_id):
                 }).eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         
         if user['status'] == 'free':
-            supabase.table('bot_usage').update({
+            supabase.table('bot_usage_poets_bot').update({
                 'daily_uses': usage['daily_uses'] + 1 if usage else 1,
                 'total_uses': usage['total_uses'] + 1 if usage else 1,
                 'updated_at': datetime.now().isoformat(),
@@ -208,7 +210,7 @@ def increment_usage(user_id):
                 'first_name': first_name
             }).eq('user_id', user_id).eq('bot_name', BOT_NAME).execute()
         else:
-            supabase.table('bot_usage').update({
+            supabase.table('bot_usage_poets_bot').update({
                 'total_uses': usage['total_uses'] + 1 if usage else 1,
                 'updated_at': datetime.now().isoformat(),
                 'username': username,
@@ -245,7 +247,7 @@ def can_search(user_id):
 def get_user_info(user_id):
     """الحصول على معلومات المستخدم"""
     try:
-        response = supabase.table('users').select('*').eq('user_id', user_id).execute()
+        response = supabase.table('users_poets_bot').select('*').eq('user_id', user_id).execute()
         if response.data:
             return response.data[0]
         return None
@@ -261,7 +263,7 @@ def update_user_status(user_id, status, days=30):
             until_date = date.today() + timedelta(days=days)
             data['premium_until'] = until_date.isoformat()
         
-        supabase.table('users').update(data).eq('user_id', user_id).execute()
+        supabase.table('users_poets_bot').update(data).eq('user_id', user_id).execute()
         return True
     except Exception as e:
         logger.error(f"Error updating user status: {e}")
@@ -291,7 +293,7 @@ def send_admin_notification(user_data, query=None, song_name=None):
         time_str = now.strftime('%H:%M')
         date_str = now.strftime('%Y/%m/%d')
         
-        message = f"🔔 <b>نشاط بوت الأغاني</b>\n\n"
+        message = f"🔔 <b>نشاط بوت الشعراء</b>\n\n"
         message += f"👤 <b>المستخدم:</b> {escape_html(user_data['first_name'])}\n"
         message += f"🆔 <b>المعرف:</b> <code>{user_data['user_id']}</code>\n"
         message += f"📱 <b>اليوزر:</b> {escape_html(user_data['username'])}\n"
@@ -303,7 +305,7 @@ def send_admin_notification(user_data, query=None, song_name=None):
         if song_name:
             message += f"🎵 <b>النتيجة:</b> {escape_html(song_name)}\n"
         
-        message += f"\n📊 <b>البوت:</b> بوت الأغاني"
+        message += f"\n📊 <b>البوت:</b> بوت الشعراء"
         
         import requests
         api_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -474,6 +476,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     welcome_text = f"""
 🎵 <b>مرحباً بك {first_name} في بوت كلمات الأغاني والأناشيد!</b>
+
+📢 <b>قناة البوت:</b> <a href="{CHANNEL_URL}">@poets_words</a>
+💬 <b>مجموعة النقاش:</b> <a href="{GROUP_URL}">@poetswords</a>
 
 💎 <b>حالتك:</b> {status_text}
 {usage_text}
@@ -677,9 +682,12 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معلومات عن البوت"""
     stats = db.get_statistics()
     about_text = f"""
-🎵 <b>بوت كلمات الأغاني والأناشيد</b> 🎵
+🎵 <b>بوت كلمات الأغاني والأناشيد - بوت الشعراء</b> 🎵
 
 📖 <b>الإصدار:</b> 2.0 (بوت تلجرام)
+
+📢 <b>قناتنا:</b> <a href="{CHANNEL_URL}">@poets_words</a>
+💬 <b>مجموعتنا:</b> <a href="{GROUP_URL}">@poetswords</a>
 
 ✨ <b>المميزات:</b>
 • بحث سريع في قاعدة بيانات الأغاني
@@ -708,7 +716,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     stats = db.get_statistics()
     if stats:
         stats_text = f"""
-📊 <b>إحصائيات بوت الأغاني</b>
+📊 <b>إحصائيات بوت الشعراء</b>
 
 📚 <b>إجمالي الأغاني:</b> {stats['total']}
 📝 <b>بها كلمات:</b> {stats['with_lyrics']}
@@ -900,12 +908,14 @@ def main():
     application.add_handler(CallbackQueryHandler(button_callback))
     
     print("="*60)
-    print("🎵 بوت كلمات الأغاني والأناشيد - النسخة المميزة")
-    print("🤖 @words_Songs_Bot")
+    print("🎵 بوت كلمات الأغاني والأناشيد - بوت الشعراء")
+    print("🤖 @poets_words_bot")
+    print("📢 قناة البوت: @poets_words")
+    print("💬 مجموعة النقاش: @poetswords")
     print("✅ أوامر: /start /help /about /stats /mystats /premium /random")
     print(f"✅ نظام المدفوعات: مجاني {FREE_LIMIT} بحث - مميز غير محدود")
-    print("✅ قاعدة بيانات: Supabase (متكاملة مع النظام الموحد)")
-    print("✅ الاشتراك عبر: @SocMed_tools_bot")
+    print("✅ قاعدة بيانات: Supabase (جداول منفصلة: users_poets_bot, bot_usage_poets_bot)")
+    print("✅ الاشتراك عبر: @SocMed_tools_bot (سيتم تغييره لاحقاً)")
     print("="*60)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
