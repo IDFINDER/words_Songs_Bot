@@ -568,32 +568,39 @@ async def my_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """معلومات الاشتراك المميز"""
+    """معلومات الاشتراك المميز - مع رابط صفحة الدفع"""
     user_id = update.effective_user.id
     user_info = get_user_info(user_id)
     
+    # الحصول على رابط التطبيق الحالي (من البيئة أو افتراضي)
+    APP_URL = os.environ.get('APP_URL', 'https://poets-words-bot.onrender.com')
+    PAYMENT_URL = f"{APP_URL}/payment-poets"
+    
     if user_info and user_info['status'] == 'premium':
         total = get_total_uses(user_id)
+        premium_until = user_info.get('premium_until', 'مدى الحياة')
+        
         text = f"""
 👑 <b>أنت مشترك في الخطة المميزة!</b>
 
 ✅ <b>مميزات الاشتراك المميز:</b>
-• بحث غير محدود
-• دعم أولوية في المعالجة
-• تحديثات حصرية أولاً
+• ✅ بحث غير محدود
+• ✅ دعم أولوية في المعالجة
+• ✅ تحديثات حصرية أولاً
 
 📊 <b>إجمالي البحوث:</b> {total}
 
-📅 <b>الاشتراك نشط حالياً</b>
+📅 <b>الاشتراك نشط حتى:</b> {premium_until}
 
 شكراً لدعمك! 🙏
 """
         keyboard = [[InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        
     else:
         remaining = get_remaining_uses(user_id)
         text = f"""
-💎 <b>الاشتراك المميز</b>
+💎 <b>الاشتراك المميز - بوت الشعراء</b>
 
 🎁 <b>مميزات الخطة المميزة:</b>
 • ✅ بحث غير محدود
@@ -601,15 +608,16 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • ✅ تحديثات حصرية أولاً
 
 💰 <b>السعر:</b>
-• <b>10 دولار مدى الحياة</b>
+• <b>10 دولار - مدى الحياة</b>
 
 📊 <b>حالتك الحالية:</b>
 • نوع الخطة: مجانية
 • البحوث المتبقية اليوم: {remaining}/{FREE_LIMIT}
 
-🔽 <b>للاشتراك، اضغط على الزر أدناه:</b>
+🔽 <b>للاشتراك المميز، اضغط على الزر أدناه:</b>
 """
-        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", url=HUB_BOT_URL)]]
+        # تغيير الرابط من HUB_BOT_URL إلى صفحة الدفع الخاصة بالبوت
+        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", url=PAYMENT_URL)]]
         reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
