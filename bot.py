@@ -885,7 +885,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     can_search_bool, current_uses = can_search(user_id)
     
     if not can_search_bool and user_info and user_info['status'] == 'free':
-        keyboard = [[InlineKeyboardButton("💎 اشتراك مميز", url=HUB_BOT_URL)]]
+        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", web_app=WebAppInfo(url=PAYMENT_URL))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await update.message.reply_text(
             f"⚠️ <b>لقد وصلت للحد اليومي!</b>\n\n"
