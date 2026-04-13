@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوت الشعراء - كلمات الأغاني والأناشيد</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            max-width: 500px;
+        }
+        .logo {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        h1 {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 30px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            margin-bottom: 20px;
+        }
+        .bot-links {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .bot-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.3);
+            padding: 15px 20px;
+            border-radius: 15px;
+            text-decoration: none;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .bot-link:hover {
+            transform: translateX(-5px);
+            border-color: #e94560;
+            background: rgba(233,69,96,0.1);
+        }
+        .bot-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .bot-icon {
+            font-size: 2rem;
+        }
+        .bot-name {
+            font-weight: bold;
+            color: white;
+        }
+        .bot-username {
+            font-size: 0.8rem;
+            color: #e94560;
+        }
+        .arrow {
+            color: #e94560;
+            font-size: 1.2rem;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 12px;
+            text-decoration: none;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .button-outline {
+            background: transparent;
+            border: 1px solid #e94560;
+        }
+        .button:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+        .footer {
+            margin-top: 30px;
+            color: #888;
+            font-size: 0.8rem;
+        }
+        .footer a {
+            color: #e94560;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎵</div>
+        <h1>بوت الشعراء</h1>
+        <div class="subtitle">كلمات الأغاني والأناشيد | بحث غير محدود للمميزين</div>
+        
+        <div class="card">
+            <div class="bot-links">
+                <a href="https://t.me/poets_words_bot" class="bot-link" target="_blank">
+                    <div class="bot-info">
+                        <span class="bot-icon">🤖</span>
+                        <div>
+                            <div class="bot-name">بوت الشعراء</div>
+                            <div class="bot-username">@poets_words_bot</div>
+                        </div>
+                    </div>
+                    <div class="arrow">➡️</div>
+                </a>
+                <a href="https://t.me/poets_words" class="bot-link" target="_blank">
+                    <div class="bot-info">
+                        <span class="bot-icon">📢</span>
+                        <div>
+                            <div class="bot-name">قناة البوت</div>
+                            <div class="bot-username">@poets_words</div>
+                        </div>
+                    </div>
+                    <div class="arrow">➡️</div>
+                </a>
+                <a href="https://t.me/poetswords" class="bot-link" target="_blank">
+                    <div class="bot-info">
+                        <span class="bot-icon">💬</span>
+                        <div>
+                            <div class="bot-name">مجموعة النقاش</div>
+                            <div class="bot-username">@poetswords</div>
+                        </div>
+                    </div>
+                    <div class="arrow">➡️</div>
+                </a>
+            </div>
+            
+            <div>
+                <a href="/payment-poets" class="button">💎 اشتراك مميز</a>
+                <a href="/admin-poets" class="button button-outline">👑 لوحة التحكم</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>👨‍💻 المطور: <a href="https://t.me/E_Alshabany">@E_Alshabany</a></p>
+            <p>✨ الخطة المجانية: {{ free_limit }} بحث يومياً | 💎 المميز: غير محدود</p>
+        </div>
+    </div>
+</body>
+</html>
