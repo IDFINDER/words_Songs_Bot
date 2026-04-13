@@ -955,6 +955,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
 # ========== مسارات Flask (لوحة التحكم وصفحة الدفع) ==========
+@app.route('/list-templates')
+def list_templates():
+    """عرض محتويات مجلد templates"""
+    import os
+    template_dir = "/opt/render/project/src/templates"
+    if os.path.exists(template_dir):
+        files = os.listdir(template_dir)
+        return f"Files in templates: {files}"
+    return "Templates folder not found"
+    
 @app.route('/test')
 def test():
     """Route تجريبي لاختبار عمل Flask"""
@@ -1040,8 +1050,232 @@ def admin_poets():
 
 @app.route('/payment-poets')
 def payment_poets():
-    """صفحة الدفع لبوت الشعراء"""
-    return render_template('payment_poets.html', free_limit=FREE_LIMIT)
+    """صفحة الدفع - HTML مباشر بدون templates"""
+    html_content = '''<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>الاشتراك المميز - بوت الشعراء</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .container { max-width: 550px; margin: 0 auto; }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 30px;
+            padding: 30px 25px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .bot-icon { font-size: 4rem; margin-bottom: 10px; }
+        h1 { 
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+        .price { 
+            font-size: 3em; 
+            background: linear-gradient(135deg, #ff6b6b, #e94560);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .price small { font-size: 0.4em; color: #aaa; }
+        .features {
+            text-align: right;
+            margin: 20px 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 20px;
+        }
+        .features h3 { color: #ff6b6b; margin-bottom: 15px; text-align: center; }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .feature-item:last-child { border-bottom: none; }
+        .feature-icon { font-size: 1.2rem; }
+        .feature-text { flex: 1; font-size: 0.95em; }
+        .badge {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+        }
+        .payment-methods {
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .method {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            margin: 4px;
+            font-size: 0.85em;
+        }
+        .number {
+            font-size: 1.8em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff6b6b, #e94560);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            background-color: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 15px;
+            margin: 15px 0;
+            direction: ltr;
+            text-align: center;
+            letter-spacing: 2px;
+            font-family: monospace;
+        }
+        .copy-btn {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .warning {
+            background: rgba(255,193,7,0.2);
+            border-right: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 12px;
+            margin: 15px 0;
+            text-align: right;
+            color: #ffc107;
+            font-size: 0.85em;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 12px;
+            text-decoration: none;
+            margin: 8px;
+            font-size: 0.95em;
+        }
+        .back-btn { background: rgba(255,255,255,0.2); }
+        .footer { text-align: center; margin-top: 20px; padding: 15px; color: #aaa; font-size: 0.7rem; }
+        .footer a { color: #ff6b6b; text-decoration: none; }
+        .toast {
+            visibility: hidden;
+            min-width: 200px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            padding: 10px;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            font-size: 0.9em;
+        }
+        .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        
+        @media (max-width: 500px) {
+            .container { padding: 10px; }
+            .card { padding: 20px 15px; }
+            .number { font-size: 1.3em; }
+            .price { font-size: 2.2em; }
+            .feature-text { font-size: 0.85em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="bot-icon">🎵</div>
+            <h1>بوت الشعراء</h1>
+            <div class="price">$10 <small>مدى الحياة</small></div>
+            
+            <div class="features">
+                <h3>🎯 مميزات الاشتراك المميز</h3>
+                <div class="feature-item"><span class="feature-icon">✅</span><span class="feature-text">بحث غير محدود عن كلمات الأغاني</span><span class="badge">غير محدود</span></div>
+                <div class="feature-item"><span class="feature-icon">✅</span><span class="feature-text">تصدير الكلمات كملفات نصية</span><span class="badge">غير محدود</span></div>
+                <div class="feature-item"><span class="feature-icon">✅</span><span class="feature-text">اقتراحات عشوائية غير محدودة</span><span class="badge">غير محدود</span></div>
+                <div class="feature-item"><span class="feature-icon">✅</span><span class="feature-text">دعم أولوية في المعالجة</span><span class="badge">أولوية</span></div>
+                <div class="feature-item"><span class="feature-icon">✅</span><span class="feature-text">تحديثات حصرية أولاً</span><span class="badge">حصري</span></div>
+            </div>
+            
+            <div class="payment-methods">
+                <h3>طرق الدفع المتاحة</h3>
+                <span class="method">📱 جيب (Jib)</span>
+                <span class="method">💳 كريمي (Creemy)</span>
+                <span class="method">📲 جوالي (JoWally)</span>
+                <span class="method">💵 ونكاش (OneCash)</span>
+            </div>
+            
+            <h3>رقم التحويل</h3>
+            <div class="number" id="paymentNumber">772130931</div>
+            <button class="copy-btn" onclick="copyNumber()">📋 نسخ الرقم</button>
+            
+            <div class="warning">
+                ⚠️ <strong>تنبيه مهم:</strong> بعد التحويل، تواصل مع المطور على تلجرام لإرسال صورة الإيصال. سيتم تفعيل اشتراكك خلال 24 ساعة.
+            </div>
+            
+            <div>
+                <a href="https://t.me/E_Alshabany" class="button">📩 تواصل مع المطور</a>
+                <a href="javascript:window.Telegram.WebApp.close()" class="button back-btn">✖️ إغلاق</a>
+            </div>
+            
+            <div class="footer">
+                <p>📢 قناة البوت: <a href="https://t.me/poets_words">@poets_words</a> | 💬 مجموعة النقاش: <a href="https://t.me/poetswords">@poetswords</a></p>
+                <p>✨ الخطة المجانية: ''' + str(FREE_LIMIT) + ''' بحث يومياً</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast">✅ تم نسخ الرقم!</div>
+    
+    <script>
+        function copyNumber() {
+            var number = document.getElementById("paymentNumber").innerText;
+            navigator.clipboard.writeText(number);
+            var toast = document.getElementById("toast");
+            toast.className = "toast show";
+            setTimeout(function(){ toast.className = "toast"; }, 3000);
+        }
+        
+        // دعم WebApp في تليجرام
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+    </script>
+</body>
+</html>'''
+    return html_content
 
 @app.route('/upgrade-user-poets', methods=['POST'])
 def upgrade_user_poets():
