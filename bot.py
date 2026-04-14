@@ -1145,45 +1145,185 @@ def sync_endpoint():
         return f"❌ خطأ: {e}", 500
 
 
-@app.route('/admin-poets')
+@app.route('/admin-poets', methods=['GET', 'POST'])
 def admin_poets():
-    """لوحة تحكم بوت كلمات و شعراء"""
-    password = request.args.get('password', '')
-    if password != ADMIN_PASSWORD:
-        return '''
-        <!DOCTYPE html>
-        <html dir="rtl">
-        <head><title>تسجيل الدخول</title>
-        <style>
-            body{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:white;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;}
-            .login-box{background:rgba(255,255,255,0.1);padding:30px;border-radius:20px;text-align:center;backdrop-filter:blur(10px);}
-            input{padding:10px;margin:10px;border-radius:10px;border:none;width:200px;}
-            button{background:#e94560;color:white;padding:10px 20px;border:none;border-radius:10px;cursor:pointer;}
-            h2{margin-bottom:20px;}
-        </style></head>
-        <body>
-            <div class="login-box">
-                <h2>🔐 لوحة تحكم بوت كلمات و شعراء</h2>
-                <form method="get">
-                    <input type="password" name="password" placeholder="كلمة المرور" autocomplete="off">
-                    <br>
-                    <button type="submit">دخول</button>
-                </form>
+    """لوحة تحكم بوت كلمات وشعراء - مع نموذج تسجيل دخول"""
+    
+    # التحقق من وجود جلسة نشطة
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            # تخزين حالة تسجيل الدخول في الجلسة
+            session['logged_in'] = True
+            return redirect(url_for('admin_poets'))
+        else:
+            return render_template_string(LOGIN_FORM, error="❌ اسم المستخدم أو كلمة المرور غير صحيحة")
+    
+    # التحقق من الجلسة عند الوصول بالـ GET
+    if session.get('logged_in'):
+        users = get_all_users()
+        stats = get_statistics()
+        daily_labels, daily_data = get_daily_usage_last_7_days()
+        
+        return render_template('admin_poets.html', 
+                              users=users, 
+                              stats=stats, 
+                              free_limit=FREE_LIMIT,
+                              daily_labels=daily_labels,
+                              daily_data=daily_data)
+    
+    # عرض نموذج تسجيل الدخول
+    return render_template_string(LOGIN_FORM, error=None)
+
+
+# نموذج تسجيل الدخول (HTML)
+LOGIN_FORM = '''
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - لوحة تحكم كلمات وشعراء</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-container {
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 30px;
+            padding: 40px 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            text-align: center;
+        }
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+        h1 {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #aaa;
+            font-size: 0.85rem;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        .input-group label {
+            display: block;
+            color: #ccc;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #e94560;
+            box-shadow: 0 0 0 2px rgba(233,69,96,0.2);
+        }
+        .input-group input::placeholder {
+            color: #666;
+        }
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        .login-btn:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+        .error {
+            background: rgba(220,53,69,0.2);
+            border-right: 3px solid #dc3545;
+            padding: 12px;
+            border-radius: 10px;
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 25px;
+            color: #666;
+            font-size: 0.7rem;
+        }
+        .footer a {
+            color: #e94560;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo">📖</div>
+            <h1>كلمات وشعراء</h1>
+            <div class="subtitle">لوحة تحكم المدير</div>
+            
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+            
+            <form method="POST">
+                <div class="input-group">
+                    <label>👤 اسم المستخدم</label>
+                    <input type="text" name="username" placeholder="أدخل اسم المستخدم" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>🔒 كلمة المرور</label>
+                    <input type="password" name="password" placeholder="أدخل كلمة المرور" required>
+                </div>
+                <button type="submit" class="login-btn">🚪 دخول</button>
+            </form>
+            
+            <div class="footer">
+                <p>🔐 لوحة تحكم آمنة</p>
             </div>
-        </body>
-        </html>
-        '''
-    
-    users = get_all_users()
-    stats = get_statistics()
-    daily_labels, daily_data = get_daily_usage_last_7_days()
-    
-    return render_template('admin_poets.html', 
-                          users=users, 
-                          stats=stats, 
-                          free_limit=FREE_LIMIT,
-                          daily_labels=daily_labels,
-                          daily_data=daily_data)
+        </div>
+    </div>
+</body>
+</html>
+'''
 
 
 @app.route('/payment-poets')
