@@ -84,7 +84,9 @@ CHANNEL_URL = os.environ.get('CHANNEL_URL', 'https://t.me/poets_words')
 GROUP_URL = os.environ.get('GROUP_URL', 'https://t.me/poetswords')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 APP_URL = os.environ.get('APP_URL', 'https://words-songs-bot.onrender.com')
-
+# ========== متغيرات تسجيل الدخول للوحة التحكم ==========
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 # ========== متغيرات الكتب والمراجع ==========
 BOOKS_CHANNEL_ID = os.environ.get('BOOKS_CHANNEL_ID', '-1003793691650')
 
