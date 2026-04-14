@@ -949,7 +949,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     elif text == "🔍 بحث متقدم":
-        # رسالة البحث المتقدم مع الذكاء الاصطناعي
         search_text = (
             "🔍 <b>بحث متقدم</b>\n\n"
             "يمكنك البحث عن الأغاني والأناشيد بالطرق التالية:\n"
@@ -963,7 +962,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ <i>تنبيه: هذه البوتات تابعة لأطراف خارجية وليست رسمية من OpenAI أو DeepSeek</i>"
         )
         
-        # أزرار الذكاء الاصطناعي
         keyboard = [
             [
                 InlineKeyboardButton("🧠 DeepSeek AI", url="https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0"),
@@ -1113,10 +1111,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         results_text = format_search_results(results)
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
-    
-    elif text == "/mystats":
-        await my_stats_command(update, context)
-        return
     
     elif text == "📢 القناة":
         await channel_command(update, context)
