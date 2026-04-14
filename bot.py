@@ -1567,16 +1567,17 @@ async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0)
 
 async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, book_id):
     """عرض تفاصيل كتاب معين وخيار التحميل"""
-    user_id = update.effective_user.id
+    query = update.callback_query
+    user_id = query.from_user.id
     user_info = get_user_info(user_id)
     
     if not user_info or user_info['status'] != 'premium':
-        await update.message.reply_text("⚠️ هذه الميزة متاحة فقط للمشتركين المميزين!")
+        await query.edit_message_text("⚠️ هذه الميزة متاحة فقط للمشتركين المميزين!")
         return
     
     book = get_book_by_id(book_id)
     if not book:
-        await update.message.reply_text("❌ الكتاب غير موجود")
+        await query.edit_message_text("❌ الكتاب غير موجود")
         return
     
     text = f"""
@@ -1598,7 +1599,7 @@ async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     # إرسال صورة الغلاف إذا وجدت مع الأزرار
     if book.get('cover_url'):
         try:
-            await update.message.reply_photo(
+            await query.message.reply_photo(
                 photo=book['cover_url'],
                 caption=text,
                 parse_mode='HTML',
@@ -1606,9 +1607,9 @@ async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             )
         except Exception as e:
             logger.error(f"Error sending cover: {e}")
-            await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+            await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
     else:
-        await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+        await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
         
 # =============================================================================
 # القسم 9: تشغيل الخادم (Flask + Telegram Bot)
