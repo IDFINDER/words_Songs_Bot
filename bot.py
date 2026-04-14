@@ -1488,7 +1488,7 @@ def get_book_by_id(book_id):
 
 
 async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book):
-    """إرسال ملف PDF باستخدام copy_message من القناة - مع إبقاء الأزرار بعد التحميل"""
+    """إرسال ملف PDF - يتم إرسال الكتاب أولاً ثم الأزرار أسفله"""
     query = update.callback_query
     
     try:
@@ -1499,10 +1499,10 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
             await query.edit_message_text("❌ عذراً، ملف هذا الكتاب غير متاح حالياً")
             return False
         
-        # تغيير النص إلى "جاري التحميل" (بدلاً من إنشاء رسالة جديدة)
+        # تغيير النص إلى "جاري التحميل"
         await query.edit_message_text("⏳ جاري تحميل الكتاب...")
         
-        # نسخ الملف من القناة مباشرة
+        # إرسال الكتاب أولاً
         await context.bot.copy_message(
             chat_id=query.from_user.id,
             from_chat_id=channel_id,
@@ -1513,18 +1513,8 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
             parse_mode='HTML'
         )
         
-        # إعادة عرض التفاصيل مع الأزرار (بدلاً من حذف الرسالة)
-        text = f"""
-📖 <b>{book.get('title', 'كتاب')}</b>
-
-✍️ <b>المؤلف:</b> {book.get('author', 'غير معروف')}
-📚 <b>التصنيف:</b> {book.get('category', 'عام')}
-
-📝 <b>الوصف:</b>
-{book.get('description', 'لا يوجد وصف متاح')}
-
-✅ <b>تم التحميل بنجاح!</b>
-"""
+        # ثم إرسال الأزرار في رسالة منفصلة أسفل الكتاب
+        text = f"✅ <b>تم تحميل كتاب: {book.get('title', 'كتاب')}</b>\n\nيمكنك الآن:"
         
         keyboard = [
             [InlineKeyboardButton("📥 تحميل مرة أخرى", callback_data=f"download_{book['id']}")],
@@ -1532,6 +1522,18 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
             [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # إرسال رسالة الأزرار الجديدة (بدلاً من تحديث الرسالة القديمة)
+        await query.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+        
+        # حذف رسالة "جاري التحميل" القديمة
+        await query.delete_message()
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error sending PDF book: {e}")
+        await query.edit_message_text(f"⚠️ حدث خطأ: {str(e)[:100]}")
+        return False
         
         # تحديث الرسالة بالأزرار الجديدة
         await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
