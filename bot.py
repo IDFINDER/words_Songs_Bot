@@ -951,7 +951,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     elif text == "🔍 بحث متقدم":
-    await update.message.reply_text(
+        await update.message.reply_text(
         "🔍 <b>بحث متقدم</b>\n\n"
         "يمكنك البحث باستخدام:\n"
         "• اسم الأغنية\n"
