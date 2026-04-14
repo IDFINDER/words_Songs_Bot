@@ -1064,6 +1064,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results_text = format_search_results(results)
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
+        async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """أمر مؤقت للحصول على file_id من الملف المرسل"""
+    if update.message.document:
+        file_id = update.message.document.file_id
+        file_name = update.message.document.file_name
+        await update.message.reply_text(
+            f"✅ <b>تم استلام الملف</b>\n\n"
+            f"📄 <b>اسم الملف:</b> {file_name}\n"
+            f"🆔 <b>File ID:</b>\n<code>{file_id}</code>\n\n"
+            f"📋 انسخ هذا الـ ID وأضفه في قاعدة البيانات",
+            parse_mode='HTML'
+        )
+    else:
+        await update.message.reply_text("⚠️ أرسل ملف PDF للحصول على File ID")
+
 
 # =============================================================================
 # القسم 8: مسارات Flask (لوحة التحكم وصفحة الدفع)
