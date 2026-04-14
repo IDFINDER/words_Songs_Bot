@@ -1487,7 +1487,7 @@ def get_book_by_id(book_id):
 
 
 async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book):
-    """إرسال ملف PDF - يتم إرسال الكتاب أولاً ثم الأزرار أسفله"""
+    """إرسال ملف PDF - مع أزرار تعمل بشكل صحيح"""
     query = update.callback_query
     
     try:
@@ -1512,8 +1512,11 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
             parse_mode='HTML'
         )
         
-        # ثم إرسال الأزرار في رسالة منفصلة أسفل الكتاب
-        text = f"✅ <b>تم تحميل كتاب: {book.get('title', 'كتاب')}</b>\n\nيمكنك الآن:"
+        # حذف رسالة "جاري التحميل"
+        await query.delete_message()
+        
+        # إرسال أزرار التحكم في رسالة جديدة
+        text = f"✅ <b>تم تحميل كتاب: {book.get('title', 'كتاب')}</b>"
         
         keyboard = [
             [InlineKeyboardButton("📥 تحميل مرة أخرى", callback_data=f"download_{book['id']}")],
@@ -1522,20 +1525,13 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        # إرسال رسالة الأزرار الجديدة (بدلاً من تحديث الرسالة القديمة)
-        await query.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
-        
-        # حذف رسالة "جاري التحميل" القديمة
-        await query.delete_message()
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error sending PDF book: {e}")
-        await query.edit_message_text(f"⚠️ حدث خطأ: {str(e)[:100]}")
-        return False
-        
-        # تحديث الرسالة بالأزرار الجديدة
-        await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
+        # إرسال رسالة الأزرار
+        await context.bot.send_message(
+            chat_id=query.from_user.id,
+            text=text,
+            parse_mode='HTML',
+            reply_markup=reply_markup
+        )
         return True
         
     except Exception as e:
