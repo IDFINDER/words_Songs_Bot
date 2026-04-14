@@ -1488,7 +1488,7 @@ def get_book_by_id(book_id):
 
 
 async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book):
-    """إرسال ملف PDF باستخدام copy_message من القناة (بدون need for pdf_file_id)"""
+    """إرسال ملف PDF باستخدام copy_message من القناة - مع إبقاء الأزرار بعد التحميل"""
     query = update.callback_query
     
     try:
@@ -1499,7 +1499,7 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
             await query.edit_message_text("❌ عذراً، ملف هذا الكتاب غير متاح حالياً")
             return False
         
-        # إعلام المستخدم
+        # تغيير النص إلى "جاري التحميل" (بدلاً من إنشاء رسالة جديدة)
         await query.edit_message_text("⏳ جاري تحميل الكتاب...")
         
         # نسخ الملف من القناة مباشرة
@@ -1513,8 +1513,28 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
             parse_mode='HTML'
         )
         
-        # حذف رسالة "جاري التحميل"
-        await query.delete_message()
+        # إعادة عرض التفاصيل مع الأزرار (بدلاً من حذف الرسالة)
+        text = f"""
+📖 <b>{book.get('title', 'كتاب')}</b>
+
+✍️ <b>المؤلف:</b> {book.get('author', 'غير معروف')}
+📚 <b>التصنيف:</b> {book.get('category', 'عام')}
+
+📝 <b>الوصف:</b>
+{book.get('description', 'لا يوجد وصف متاح')}
+
+✅ <b>تم التحميل بنجاح!</b>
+"""
+        
+        keyboard = [
+            [InlineKeyboardButton("📥 تحميل مرة أخرى", callback_data=f"download_{book['id']}")],
+            [InlineKeyboardButton("🔙 العودة للكتب", callback_data="books_menu")],
+            [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # تحديث الرسالة بالأزرار الجديدة
+        await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
         return True
         
     except Exception as e:
