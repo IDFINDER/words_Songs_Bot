@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة إدارة بوت الشعراء - كلمات الأغاني</title>
+    <title>لوحة إدارة بوت كلمات وشعراء - كلمات الأغاني</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -22,10 +22,30 @@
             border-radius: 20px;
             margin-bottom: 30px;
             text-align: center;
+            position: relative;
         }
         .header h1 { font-size: 2rem; margin-bottom: 10px; }
         .header h1 i { margin-left: 10px; }
         .header p { opacity: 0.9; }
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .logout-btn:hover {
+            background: #dc3545;
+            transform: scale(1.02);
+        }
         
         .stats-grid {
             display: grid;
@@ -194,6 +214,7 @@
             th, td { font-size: 0.7rem; padding: 8px; }
             .search-box { flex-direction: column; }
             .search-btn, .clear-btn { width: 100%; }
+            .logout-btn { position: static; margin-bottom: 15px; display: inline-block; }
         }
         
         .bot-icon {
@@ -206,7 +227,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎵 لوحة إدارة بوت الشعراء</h1>
+            <a href="/admin-logout" class="logout-btn">🚪 خروج</a>
+            <h1>📖 لوحة إدارة بوت كلمات وشعراء</h1>
             <p>@poets_words_bot | إدارة المستخدمين | إحصائيات تفصيلية | نظام اشتراك مميز</p>
         </div>
         
@@ -293,9 +315,11 @@
         </div>
         
         <div class="footer">
-            🤖 بوت الشعراء - @poets_words_bot | آخر تحديث: {{ stats.last_update }}
+            🤖 بوت كلمات وشعراء - @poets_words_bot | آخر تحديث: {{ stats.last_update }}
             <br>
             📢 قناة البوت: @poets_words | 💬 مجموعة النقاش: @poetswords
+            <br><br>
+            👨‍💻 <b>تطوير:</b> <a href="https://t.me/Alshabany_Ai" style="color: #e94560; text-decoration: none;">@Alshabany_Ai</a>
         </div>
     </div>
     
