@@ -1447,13 +1447,15 @@ def get_book_by_id(book_id):
         return None
 
 
-async def send_pdf_book(update: Update, book):
+async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book):
     """إرسال ملف PDF للكتاب من القناة"""
+    query = update.callback_query
+    
     try:
         pdf_message_id = book.get('pdf_message_id')
         
         if not pdf_message_id:
-            await update.message.reply_text("❌ عذراً، ملف هذا الكتاب غير متاح حالياً")
+            await query.edit_message_text("❌ عذراً، ملف هذا الكتاب غير متاح حالياً")
             return False
         
         # تنظيف معرف القناة (إزالة -100 من البداية)
@@ -1461,39 +1463,30 @@ async def send_pdf_book(update: Update, book):
         if str(chat_id).startswith('-100'):
             chat_id = str(chat_id).replace('-100', '')
         
+        # إعلام المستخدم بأن الملف قيد الإرسال
+        await query.edit_message_text("⏳ جاري تحضير ملف PDF...")
+        
         # بناء الرسالة
         caption = f"📚 <b>{book.get('title', 'كتاب')}</b>\n\n"
         if book.get('author'):
             caption += f"✍️ <b>المؤلف:</b> {book.get('author')}\n"
         if book.get('category'):
             caption += f"📖 <b>التصنيف:</b> {book.get('category')}\n"
-        if book.get('description'):
-            caption += f"\n📝 <b>الوصف:</b>\n{book.get('description')}\n"
-        
-        # إرسال صورة الغلاف إذا وجدت
-        if book.get('cover_url'):
-            try:
-                await update.message.reply_photo(
-                    photo=book['cover_url'],
-                    caption=caption,
-                    parse_mode='HTML'
-                )
-            except Exception as e:
-                logger.error(f"Error sending cover: {e}")
-                await update.message.reply_text(caption, parse_mode='HTML')
-        else:
-            await update.message.reply_text(caption, parse_mode='HTML')
         
         # إرسال ملف PDF
-        await update.message.reply_document(
+        await query.message.reply_document(
             document=f"https://t.me/c/{chat_id}/{pdf_message_id}",
-            caption="📄 اضغط لتحميل الكتاب"
+            caption=caption,
+            parse_mode='HTML'
         )
+        
+        # حذف رسالة "جاري التحضير"
+        await query.delete_message()
         return True
         
     except Exception as e:
         logger.error(f"Error sending PDF book: {e}")
-        await update.message.reply_text("⚠️ حدث خطأ أثناء إرسال الملف. يرجى المحاولة لاحقاً")
+        await query.edit_message_text(f"⚠️ حدث خطأ أثناء إرسال الملف: {str(e)[:100]}")
         return False
 
 
