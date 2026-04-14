@@ -1395,9 +1395,197 @@ def api_poets_users():
 
 
 # =============================================================================
-# القسم 9: تشغيل الخادم (Flask + Telegram Bot)
+# القسم 10: دوال الكتب والمراجع (للمستخدمين المميزين فقط)
 # =============================================================================
 
+BOOKS_CHANNEL_ID = os.environ.get('BOOKS_CHANNEL_ID', '-1003793691650')
+BOOKS_PER_PAGE = 5
+
+def get_books_list():
+    """جلب قائمة الكتب من قاعدة البيانات"""
+    try:
+        response = supabase.table('books').select('*').order('title').execute()
+        return response.data if response.data else []
+    except Exception as e:
+        logger.error(f"Error getting books list: {e}")
+        return []
+
+
+def get_book_by_id(book_id):
+    """جلب معلومات كتاب معين"""
+    try:
+        response = supabase.table('books').select('*').eq('id', book_id).execute()
+        if response.data:
+            return response.data[0]
+        return None
+    except Exception as e:
+        logger.error(f"Error getting book by id: {e}")
+        return None
+
+
+async def send_pdf_book(update: Update, book):
+    """إرسال ملف PDF للكتاب من القناة"""
+    try:
+        pdf_message_id = book.get('pdf_message_id')
+        
+        if not pdf_message_id:
+            await update.message.reply_text("❌ عذراً، ملف هذا الكتاب غير متاح حالياً")
+            return False
+        
+        # تنظيف معرف القناة (إزالة -100 من البداية)
+        chat_id = BOOKS_CHANNEL_ID
+        if str(chat_id).startswith('-100'):
+            chat_id = str(chat_id).replace('-100', '')
+        
+        # بناء الرسالة
+        caption = f"📚 <b>{book.get('title', 'كتاب')}</b>\n\n"
+        if book.get('author'):
+            caption += f"✍️ <b>المؤلف:</b> {book.get('author')}\n"
+        if book.get('category'):
+            caption += f"📖 <b>التصنيف:</b> {book.get('category')}\n"
+        if book.get('description'):
+            caption += f"\n📝 <b>الوصف:</b>\n{book.get('description')}\n"
+        
+        # إرسال صورة الغلاف إذا وجدت
+        if book.get('cover_url'):
+            try:
+                await update.message.reply_photo(
+                    photo=book['cover_url'],
+                    caption=caption,
+                    parse_mode='HTML'
+                )
+            except Exception as e:
+                logger.error(f"Error sending cover: {e}")
+                await update.message.reply_text(caption, parse_mode='HTML')
+        else:
+            await update.message.reply_text(caption, parse_mode='HTML')
+        
+        # إرسال ملف PDF
+        await update.message.reply_document(
+            document=f"https://t.me/c/{chat_id}/{pdf_message_id}",
+            caption="📄 اضغط لتحميل الكتاب"
+        )
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error sending PDF book: {e}")
+        await update.message.reply_text("⚠️ حدث خطأ أثناء إرسال الملف. يرجى المحاولة لاحقاً")
+        return False
+
+
+async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0):
+    """عرض قائمة الكتب"""
+    user_id = update.effective_user.id
+    user_info = get_user_info(user_id)
+    
+    # التحقق من الاشتراك المميز
+    if not user_info or user_info['status'] != 'premium':
+        PAYMENT_URL = f"{APP_URL}/payment-poets"
+        text = """
+📚 <b>كتب ومراجع أدبية</b>
+
+🎁 هذه الميزة متاحة فقط للمشتركين المميزين!
+
+📖 <b>مكتبة الكتب تشمل:</b>
+• دواوين شعرية كاملة
+• كتب عن الشعر والنقد الأدبي
+• مراجع لغوية وقواعدية
+• روايات وقصص أدبية
+
+💰 <b>سعر الاشتراك المميز:</b> 10 دولار (مدى الحياة)
+
+🔽 اشترك الآن واستمتع بتحميل الكتب بصيغة PDF
+"""
+        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", web_app=WebAppInfo(url=PAYMENT_URL))]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+        return
+    
+    # للمستخدمين المميزين: عرض قائمة الكتب
+    books = get_books_list()
+    
+    if not books:
+        await update.message.reply_text("📚 لا توجد كتب متاحة حالياً. سيتم إضافتها قريباً!")
+        return
+    
+    # حساب الترقيم
+    start = page * BOOKS_PER_PAGE
+    end = start + BOOKS_PER_PAGE
+    page_books = books[start:end]
+    total_pages = (len(books) + BOOKS_PER_PAGE - 1) // BOOKS_PER_PAGE
+    
+    # بناء قائمة الكتب
+    text = f"📚 <b>مكتبة الكتب والمراجع</b>\n"
+    text += f"📊 <b>إجمالي الكتب:</b> {len(books)}\n"
+    text += f"📄 <b>الصفحة:</b> {page + 1} من {total_pages}\n\n"
+    
+    # بناء الأزرار (كل كتاب زر منفصل)
+    keyboard = []
+    for i, book in enumerate(page_books, start=start + 1):
+        book_title = book.get('title', 'كتاب')[:30]
+        keyboard.append([InlineKeyboardButton(f"📖 {i}. {book_title}", callback_data=f"book_{book['id']}")])
+    
+    # أزرار التنقل بين الصفحات
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(InlineKeyboardButton("⬅️ السابق", callback_data=f"books_page_{page-1}"))
+    if page < total_pages - 1:
+        nav_buttons.append(InlineKeyboardButton("التالي ➡️", callback_data=f"books_page_{page+1}"))
+    if nav_buttons:
+        keyboard.append(nav_buttons)
+    
+    # زر العودة للقائمة الرئيسية
+    keyboard.append([InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+
+
+async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, book_id):
+    """عرض تفاصيل كتاب معين وخيار التحميل"""
+    user_id = update.effective_user.id
+    user_info = get_user_info(user_id)
+    
+    if not user_info or user_info['status'] != 'premium':
+        await update.message.reply_text("⚠️ هذه الميزة متاحة فقط للمشتركين المميزين!")
+        return
+    
+    book = get_book_by_id(book_id)
+    if not book:
+        await update.message.reply_text("❌ الكتاب غير موجود")
+        return
+    
+    text = f"""
+📖 <b>{book.get('title', 'كتاب')}</b>
+
+✍️ <b>المؤلف:</b> {book.get('author', 'غير معروف')}
+📚 <b>التصنيف:</b> {book.get('category', 'عام')}
+
+📝 <b>الوصف:</b>
+{book.get('description', 'لا يوجد وصف متاح')}
+"""
+    
+    keyboard = [
+        [InlineKeyboardButton("📥 تحميل الكتاب PDF", callback_data=f"download_{book_id}")],
+        [InlineKeyboardButton("🔙 العودة للكتب", callback_data="books_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # إرسال صورة الغلاف إذا وجدت مع الأزرار
+    if book.get('cover_url'):
+        try:
+            await update.message.reply_photo(
+                photo=book['cover_url'],
+                caption=text,
+                parse_mode='HTML',
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            logger.error(f"Error sending cover: {e}")
+            await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+        
 # =============================================================================
 # القسم 9: تشغيل الخادم (Flask + Telegram Bot)
 # =============================================================================
