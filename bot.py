@@ -917,6 +917,28 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة رسائل المستخدم"""
     text = update.message.text.strip()
+    # ⬇️⬇️⬇️ أضف هذا الجزء هنا في البداية ⬇️⬇️⬇️
+    
+    # معالجة الأمر /getmsgid
+    if text == "/getmsgid":
+        await update.message.reply_text("📎 أرسل رابط الرسالة من القناة الآن\n\nمثال: https://t.me/c/3793691650/3")
+        return
+    
+    # معالجة روابط القناة
+    if "t.me/c/" in text:
+        try:
+            parts = text.split("/")
+            message_id = int(parts[-1])
+            await update.message.reply_text(
+                f"✅ <b>Message ID:</b> <code>{message_id}</code>\n\n"
+                f"قم بتحديث قاعدة البيانات بهذا الرقم",
+                parse_mode='HTML'
+            )
+            return
+        except:
+            pass
+    
+    # ⬆️⬆️⬆️ ينتهي هنا ⬆️⬆️⬆️
     user_id = update.effective_user.id
     PAYMENT_URL = f"{APP_URL}/payment-poets"
     
