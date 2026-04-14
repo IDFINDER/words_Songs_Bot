@@ -928,8 +928,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parts = text.split("/")
             message_id = int(parts[-1])
             await update.message.reply_text(
-                f"✅ <b>Message ID:</b> <code>{message_id}</code>\n\n"
-                f"قم بتحديث قاعدة البيانات بهذا الرقم",
+                f"✅ <b>Message ID:</b> <code>{message_id}</code>",
                 parse_mode='HTML'
             )
             return
@@ -939,16 +938,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     PAYMENT_URL = f"{APP_URL}/payment-poets"
     
-    # ========== معالجة الأزرار ==========
+    # ========== معالجة الأزرار (كل زر if منفصل) ==========
     if text == "🎲 اقتراح عشوائي":
         await random_command(update, context)
         return
     
-    elif text == "🏠 الرئيسية":
+    if text == "🏠 الرئيسية":
         await start_command(update, context)
         return
     
-    elif text == "🔍 بحث متقدم":
+    if text == "🔍 بحث متقدم":
         search_text = (
             "🔍 <b>بحث متقدم</b>\n\n"
             "يمكنك البحث عن الأغاني والأناشيد بالطرق التالية:\n"
@@ -957,51 +956,44 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• 📚 <b>الفئة</b> (أغاني، أناشيد، زوامل، قصائد)\n\n"
             "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n\n"
             "🤖 <b>استمتع بميزات الذكاء الاصطناعي المجانية!</b>\n"
-            "قم بطرح أسئلتك، كتابة قصائد، تلخيص نصوص، أو أي شيء يخطر ببالك\n\n"
             "👇 <b>جرب الآن عبر البوتات التالية:</b>\n"
-            "⚠️ <i>تنبيه: هذه البوتات تابعة لأطراف خارجية وليست رسمية من OpenAI أو DeepSeek</i>"
+            "⚠️ <i>تنبيه: هذه البوتات تابعة لأطراف خارجية وليست رسمية</i>"
         )
         
-        keyboard = [
-            [
-                InlineKeyboardButton("🧠 DeepSeek AI", url="https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0"),
-                InlineKeyboardButton("💬 ChatGPT AI", url="https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0")
-            ]
-        ]
+        keyboard = [[
+            InlineKeyboardButton("🧠 DeepSeek AI", url="https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0"),
+            InlineKeyboardButton("💬 ChatGPT AI", url="https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0")
+        ]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(
-            search_text,
-            parse_mode='HTML',
-            reply_markup=reply_markup
-        )
+        await update.message.reply_text(search_text, parse_mode='HTML', reply_markup=reply_markup)
         return
     
-    elif text == "ℹ️ المساعدة" or text == "/help":
+    if text == "ℹ️ المساعدة" or text == "/help":
         await help_command(update, context)
         return
     
-    elif text == "💎 اشتراك مميز" or text == "/premium":
+    if text == "💎 اشتراك مميز" or text == "/premium":
         await premium_command(update, context)
         return
     
-    elif text == "/mystats":
+    if text == "/mystats":
         await my_stats_command(update, context)
         return
     
-    elif text == "📢 القناة":
+    if text == "📢 القناة":
         await channel_command(update, context)
         return
     
-    elif text == "💬 المجموعة":
+    if text == "💬 المجموعة":
         await group_command(update, context)
         return
     
-    elif text == "📚 كتب ومراجع":
+    if text == "📚 كتب ومراجع":
         await books_menu(update, context)
         return
     
-    # ========== التحقق مما إذا كان المستخدم يختار من نتائج البحث ==========
+    # ========== اختيار رقم من نتائج البحث ==========
     if text.isdigit() and 1 <= int(text) <= 5:
         search_key = None
         for key in user_search_results.keys():
@@ -1014,25 +1006,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             idx = int(text) - 1
             if idx < len(results):
                 song = results[idx]['song']
-                
                 increment_usage(user_id)
-                
                 message, file_data = format_single_response(song, user_id)
                 
                 if file_data:
                     await update.message.reply_text(message, parse_mode='HTML', reply_markup=get_main_keyboard())
-                    
                     file_content, filename = file_data
                     with open(filename, 'w', encoding='utf-8') as f:
                         f.write(file_content)
-                    
                     with open(filename, 'rb') as f:
-                        await update.message.reply_document(
-                            document=f,
-                            filename=filename,
-                            caption="📄 ملف الكلمات الكاملة"
-                        )
-                    
+                        await update.message.reply_document(document=f, filename=filename, caption="📄 ملف الكلمات الكاملة")
                     os.remove(filename)
                 
                 del user_search_results[search_key]
@@ -1050,25 +1033,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📊 <b>الحد المسموح:</b> {FREE_LIMIT} بحث يومياً\n"
             f"✅ <b>البحوث اليوم:</b> {current_uses}\n"
             f"🎯 <b>المتبقي:</b> {FREE_LIMIT - current_uses}\n\n"
-            f"💎 <b>للبحث غير المحدود، اشترك في الخطة المميزة!</b>\n\n"
-            f"💰 <b>الاشتراك المميز:</b> 10 دولار مدى الحياة\n\n"
-            f"اضغط على الزر أدناه للاشتراك:",
+            f"💎 <b>للبحث غير المحدود، اشترك في الخطة المميزة!</b>",
             parse_mode='HTML',
             reply_markup=reply_markup
         )
         return
     
     status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {escape_html(text)}...")
-    
     results = search_multiple_songs(text)
     
     if not results:
         await status_msg.edit_text(
-            f"❌ <b>لم أتمكن من العثور على أغنية باسم \"{escape_html(text)}\"</b>\n\n"
-            f"💡 جرب:\n"
-            f"• كتابة جزء من الكلمات\n"
-            f"• استخدام زر 🎲 اقتراح عشوائي\n"
-            f"• التأكد من صحة الاسم",
+            f"❌ <b>لم أتمكن من العثور على أغنية باسم \"{escape_html(text)}\"</b>",
             parse_mode='HTML',
             reply_markup=get_main_keyboard()
         )
@@ -1079,42 +1055,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(results) == 1:
         song = results[0]['song']
         increment_usage(user_id)
-        
         message, file_data = format_single_response(song, user_id)
         
         if file_data:
             await update.message.reply_text(message, parse_mode='HTML', reply_markup=get_main_keyboard())
-            
             file_content, filename = file_data
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(file_content)
-            
             with open(filename, 'rb') as f:
-                await update.message.reply_document(
-                    document=f,
-                    filename=filename,
-                    caption="📄 ملف الكلمات الكاملة"
-                )
-            
+                await update.message.reply_document(document=f, filename=filename, caption="📄 ملف الكلمات الكاملة")
             os.remove(filename)
         
-        user_data = {
+        send_admin_notification({
             'user_id': user_id,
             'first_name': update.effective_user.first_name,
             'username': update.effective_user.username or 'لا يوجد'
-        }
-        send_admin_notification(user_data, query=text, song_name=song.get('name'))
+        }, query=text, song_name=song.get('name'))
         
     else:
         search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
         user_search_results[search_key] = results
-        
-        results_text = format_search_results(results)
-        await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
-    
-    elif text == "📢 القناة":
-        await channel_command(update, context)
-        return
+        await update.message.reply_text(format_search_results(results), parse_mode='HTML', reply_markup=get_main_keyboard())
     
     elif text == "💬 المجموعة":
         await group_command(update, context)
