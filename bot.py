@@ -887,13 +887,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif query.data.startswith("book_"):
         book_id = int(query.data.replace("book_", ""))
-        await show_book_details(update, context, book_id)
+        book = get_book_by_id(book_id)
+        if book:
+            await show_book_details(update, context, book_id)
     
     elif query.data.startswith("download_"):
         book_id = int(query.data.replace("download_", ""))
         book = get_book_by_id(book_id)
         if book:
-            await send_pdf_book(update, book)
+            await send_pdf_book(update, context, book)  # تمرير context و book
     
     elif query.data == "books_menu":
         await books_menu(update, context)
@@ -1453,7 +1455,6 @@ def get_book_by_id(book_id):
 async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book):
     """إرسال ملف PDF للكتاب - باستخدام file_id"""
     query = update.callback_query
-    bot = context.bot
     
     try:
         # استخدم file_id من قاعدة البيانات
@@ -1467,7 +1468,7 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
         await query.edit_message_text("⏳ جاري تحميل الكتاب...")
         
         # إرسال الملف مباشرة
-        await bot.send_document(
+        await context.bot.send_document(
             chat_id=query.from_user.id,
             document=pdf_file_id,
             caption=f"📚 <b>{book.get('title', 'كتاب')}</b>\n\n"
@@ -1487,7 +1488,8 @@ async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book
 
 async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0):
     """عرض قائمة الكتب"""
-    user_id = update.effective_user.id
+    query = update.callback_query if update.callback_query else None
+    user_id = update.effective_user.id if update.effective_user else query.from_user.id
     user_info = get_user_info(user_id)
     
     # التحقق من الاشتراك المميز
@@ -1510,14 +1512,22 @@ async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0)
 """
         keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", web_app=WebAppInfo(url=PAYMENT_URL))]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+        
+        if query:
+            await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
+        else:
+            await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
         return
     
     # للمستخدمين المميزين: عرض قائمة الكتب
     books = get_books_list()
     
     if not books:
-        await update.message.reply_text("📚 لا توجد كتب متاحة حالياً. سيتم إضافتها قريباً!")
+        msg = "📚 لا توجد كتب متاحة حالياً. سيتم إضافتها قريباً!"
+        if query:
+            await query.edit_message_text(msg)
+        else:
+            await update.message.reply_text(msg)
         return
     
     # حساب الترقيم
@@ -1531,13 +1541,13 @@ async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0)
     text += f"📊 <b>إجمالي الكتب:</b> {len(books)}\n"
     text += f"📄 <b>الصفحة:</b> {page + 1} من {total_pages}\n\n"
     
-    # بناء الأزرار (كل كتاب زر منفصل)
+    # بناء الأزرار
     keyboard = []
     for i, book in enumerate(page_books, start=start + 1):
         book_title = book.get('title', 'كتاب')[:30]
         keyboard.append([InlineKeyboardButton(f"📖 {i}. {book_title}", callback_data=f"book_{book['id']}")])
     
-    # أزرار التنقل بين الصفحات
+    # أزرار التنقل
     nav_buttons = []
     if page > 0:
         nav_buttons.append(InlineKeyboardButton("⬅️ السابق", callback_data=f"books_page_{page-1}"))
@@ -1546,11 +1556,13 @@ async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0)
     if nav_buttons:
         keyboard.append(nav_buttons)
     
-    # زر العودة للقائمة الرئيسية
     keyboard.append([InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")])
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
+    
+    if query:
+        await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(text, parse_mode='HTML', reply_markup=reply_markup)
 
 
 async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, book_id):
@@ -1584,20 +1596,7 @@ async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # إرسال صورة الغلاف إذا وجدت مع الأزرار
-    if book.get('cover_url'):
-        try:
-            await query.message.reply_photo(
-                photo=book['cover_url'],
-                caption=text,
-                parse_mode='HTML',
-                reply_markup=reply_markup
-            )
-        except Exception as e:
-            logger.error(f"Error sending cover: {e}")
-            await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
-    else:
-        await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
+    await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
         
 # =============================================================================
 # القسم 9: تشغيل الخادم (Flask + Telegram Bot)
