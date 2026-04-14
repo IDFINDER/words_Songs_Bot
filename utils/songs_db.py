@@ -61,7 +61,6 @@ def normalize_text(text):
     
     return text
 
-
 def expand_with_synonyms(text):
     """توسيع النص بالمرادفات"""
     if not text:
@@ -78,7 +77,6 @@ def expand_with_synonyms(text):
     
     return ' '.join(expanded)
 
-
 def clean_filename(text):
     """تنظيف النص لاستخدامه كاسم ملف"""
     if not text:
@@ -88,7 +86,6 @@ def clean_filename(text):
     text = re.sub(r'_+', '_', text)
     return text[:50]
 
-
 # ========== دوال قاعدة البيانات ==========
 
 class SongsDatabase:
@@ -96,6 +93,7 @@ class SongsDatabase:
     
     def __init__(self, supabase_url: str, supabase_key: str):
         self.supabase: Client = create_client(supabase_url, supabase_key)
+        # ربط الدوال المساعدة بالفئة
         self.normalize_text = normalize_text
         self.expand_with_synonyms = expand_with_synonyms
         self.clean_filename = clean_filename
@@ -129,6 +127,7 @@ class SongsDatabase:
             if not query_words:
                 return None
             
+            # جلب جميع الأغاني
             songs = self.get_all_songs()
             
             best_match = None
@@ -141,23 +140,27 @@ class SongsDatabase:
                 writer = self.normalize_text(song.get('writer', ''))
                 artist = self.normalize_text(song.get('artist', ''))
                 
+                # التحقق من التطابق التام
                 if song_name == normalized_query:
                     exact_matches.append(song)
                     continue
                 
                 score = 0
                 
+                # البحث في اسم الأغنية
                 for word in query_words:
                     if word in song_name:
                         score += 0.5
                     if word in artist:
                         score += 0.3
                 
+                # البحث في الكلمات
                 if lyrics:
                     for word in query_words:
                         if word in lyrics:
                             score += 0.1
                 
+                # البحث في اسم الكاتب
                 if writer:
                     for word in query_words:
                         if word in writer:
@@ -167,6 +170,7 @@ class SongsDatabase:
                     best_score = score
                     best_match = song
             
+            # إعطاء الأولوية للتطابق التام
             if exact_matches:
                 return exact_matches[0]
             
@@ -230,8 +234,51 @@ class SongsDatabase:
             logger.error(f"Error getting statistics: {e}")
             return None
 
-
 # ========== دوال تنسيق الردود ==========
+
+def format_song_response(song):
+    """تنسيق استجابة الأغنية (رسالة + ملف نصي)"""
+    if not song:
+        return None, None
+    
+    # استخراج البيانات
+    song_name = song.get('name', 'غير معروف')
+    artist = song.get('artist', '')
+    writer = song.get('writer', '')
+    category = song.get('category', '')
+    youtube_url = song.get('youtube_url', '')
+    lyrics = song.get('lyrics', '')
+    
+    # بناء اسم الملف
+    if artist:
+        filename = f"{clean_filename(artist)}_{clean_filename(song_name)}.txt"
+    else:
+        filename = f"{clean_filename(song_name)}.txt"
+    
+    # بناء الرسالة (أول 200 حرف من الكلمات)
+    lyrics_preview = lyrics[:200] + ('...' if len(lyrics) > 200 else '') if lyrics else 'لا توجد كلمات متاحة'
+    
+    message = f"**{song_name}**"
+    if artist:
+        message += f" | {artist}"
+    message += "\n\n"
+    
+    if lyrics:
+        message += f"📝 الـكـلمــــات:\n{lyrics_preview}\n\n"
+    
+    if writer:
+        message += f"✍️ من كلــمــــات: {writer}\n\n"
+    
+    if category:
+        message += f"🏷️ الفئــــة: {category}\n\n"
+    
+    if youtube_url:
+        message += f"▶️ **مشاهدة الفيديو:**\n{youtube_url}"
+    
+    # بناء الملف النصي
+    file_content = build_text_file(song)
+    
+    return message, (file_content, filename)
 
 def build_text_file(song):
     """بناء محتوى الملف النصي"""
@@ -241,6 +288,7 @@ def build_text_file(song):
     category = song.get('category', '')
     lyrics = song.get('lyrics', '')
     
+    # رأس الملف
     content = "=" * 40 + "\n"
     content += f"🎵 اسم الأغنية: {song_name}\n"
     if artist:
@@ -251,16 +299,17 @@ def build_text_file(song):
         content += f"🏷️ الفئة: {category}\n"
     content += "=" * 40 + "\n\n"
     
+    # الكلمات
     content += "📝 الكلمات الكاملة:\n\n"
     content += lyrics if lyrics else "لا توجد كلمات متاحة\n"
     content += "\n\n"
     
+    # تذييل الملف
     content += "=" * 40 + "\n"
-    content += "📎 تم التحميل عبر: بوت كلمات و شعراء\n"
-    content += "🔗 رابط البوت: @poets_words_bot\n"
-    content += "📢 قناة البوت: @poets_words\n"
-    content += "💬 مجموعة النقاش: @poetswords\n"
+    content += "📎 تم التحميل عبر: بوت كلمات الأناشيد والأغاني\n"
+    content += "🔗 رابط البوت: @words_Songs_Bot\n"
     content += "👨‍💻 تطوير: @E_Alshabany\n"
+    content += "🚀 تم النشر بواسطة: Ebrahim Alshabany\n"
     content += "=" * 40 + "\n"
     
     return content
