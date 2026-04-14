@@ -290,7 +290,7 @@ def build_text_file(song):
     
     # رأس الملف
     content = "=" * 40 + "\n"
-    content += f"🎵 اسم الأغنية: {song_name}\n"
+    content += f"🎵 الاسم: {song_name}\n"
     if artist:
         content += f"👤 المطرب/الشاعر: {artist}\n"
     if writer:
@@ -304,12 +304,13 @@ def build_text_file(song):
     content += lyrics if lyrics else "لا توجد كلمات متاحة\n"
     content += "\n\n"
     
-    # تذييل الملف
+    # ========== التذييل الجديد ==========
     content += "=" * 40 + "\n"
-    content += "📎 تم التحميل عبر: بوت كلمات الأناشيد والأغاني\n"
-    content += "🔗 رابط البوت: @words_Songs_Bot\n"
-    content += "👨‍💻 تطوير: @E_Alshabany\n"
-    content += "🚀 تم النشر بواسطة: Ebrahim Alshabany\n"
+    content += "📎 تم التحميل عبر: بوت كلمات و شعراء\n"
+    content += "🔗 رابط البوت: @poets_words_bot\n"
+    content += "📢 قناة البوت: @poets_words\n"
+    content += "💬 مجموعة النقاش: @poetswords\n"
+    content += "👨‍💻 تطوير: @Alshabany_Ai\n"
     content += "=" * 40 + "\n"
     
     return content
