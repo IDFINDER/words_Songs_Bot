@@ -85,6 +85,9 @@ GROUP_URL = os.environ.get('GROUP_URL', 'https://t.me/poetswords')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 APP_URL = os.environ.get('APP_URL', 'https://words-songs-bot.onrender.com')
 
+# ========== متغيرات الكتب والمراجع ==========
+BOOKS_CHANNEL_ID = os.environ.get('BOOKS_CHANNEL_ID', '-1003793691650')
+
 if not TOKEN or not SUPABASE_URL or not SUPABASE_KEY:
     print("❌ خطأ: تأكد من تعيين المتغيرات المطلوبة")
     exit(1)
@@ -1448,47 +1451,39 @@ def get_book_by_id(book_id):
 
 
 async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book):
-    """إرسال ملف PDF للكتاب من القناة"""
+    """إرسال ملف PDF للكتاب - باستخدام file_id"""
     query = update.callback_query
+    bot = context.bot
     
     try:
-        pdf_message_id = book.get('pdf_message_id')
+        # استخدم file_id من قاعدة البيانات
+        pdf_file_id = book.get('pdf_file_id')
         
-        if not pdf_message_id:
+        if not pdf_file_id:
             await query.edit_message_text("❌ عذراً، ملف هذا الكتاب غير متاح حالياً")
             return False
         
-        # تنظيف معرف القناة (إزالة -100 من البداية)
-        chat_id = BOOKS_CHANNEL_ID
-        if str(chat_id).startswith('-100'):
-            chat_id = str(chat_id).replace('-100', '')
+        # إعلام المستخدم
+        await query.edit_message_text("⏳ جاري تحميل الكتاب...")
         
-        # إعلام المستخدم بأن الملف قيد الإرسال
-        await query.edit_message_text("⏳ جاري تحضير ملف PDF...")
-        
-        # بناء الرسالة
-        caption = f"📚 <b>{book.get('title', 'كتاب')}</b>\n\n"
-        if book.get('author'):
-            caption += f"✍️ <b>المؤلف:</b> {book.get('author')}\n"
-        if book.get('category'):
-            caption += f"📖 <b>التصنيف:</b> {book.get('category')}\n"
-        
-        # إرسال ملف PDF
-        await query.message.reply_document(
-            document=f"https://t.me/c/{chat_id}/{pdf_message_id}",
-            caption=caption,
+        # إرسال الملف مباشرة
+        await bot.send_document(
+            chat_id=query.from_user.id,
+            document=pdf_file_id,
+            caption=f"📚 <b>{book.get('title', 'كتاب')}</b>\n\n"
+                   f"✍️ <b>المؤلف:</b> {book.get('author', 'غير معروف')}\n"
+                   f"📖 <b>التصنيف:</b> {book.get('category', 'عام')}",
             parse_mode='HTML'
         )
         
-        # حذف رسالة "جاري التحضير"
+        # حذف رسالة "جاري التحميل"
         await query.delete_message()
         return True
         
     except Exception as e:
         logger.error(f"Error sending PDF book: {e}")
-        await query.edit_message_text(f"⚠️ حدث خطأ أثناء إرسال الملف: {str(e)[:100]}")
+        await query.edit_message_text(f"⚠️ حدث خطأ: {str(e)[:100]}")
         return False
-
 
 async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0):
     """عرض قائمة الكتب"""
