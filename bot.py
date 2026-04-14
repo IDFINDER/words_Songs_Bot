@@ -1630,6 +1630,8 @@ def run_telegram_bot():
     application.add_handler(CommandHandler("random", random_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(CommandHandler("getfileid", get_file_id))
+    application.add_handler(MessageHandler(filters.Document.ALL, get_file_id))
     
     print("="*60)
     print("🎵 بوت كلمات و شعراء - نسخة متكاملة مع لوحة تحكم")
