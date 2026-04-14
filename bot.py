@@ -916,14 +916,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة رسائل المستخدم"""
     text = update.message.text.strip()
-    # ⬇️⬇️⬇️ أضف هذا الجزء هنا في البداية ⬇️⬇️⬇️
     
-    # معالجة الأمر /getmsgid
+    # ========== معالجة الأمر /getmsgid ==========
     if text == "/getmsgid":
         await update.message.reply_text("📎 أرسل رابط الرسالة من القناة الآن\n\nمثال: https://t.me/c/3793691650/3")
         return
     
-    # معالجة روابط القناة
+    # ========== معالجة روابط القناة ==========
     if "t.me/c/" in text:
         try:
             parts = text.split("/")
@@ -937,11 +936,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
     
-    # ⬆️⬆️⬆️ ينتهي هنا ⬆️⬆️⬆️
     user_id = update.effective_user.id
     PAYMENT_URL = f"{APP_URL}/payment-poets"
     
-    # معالجة الأزرار
+    # ========== معالجة الأزرار ==========
     if text == "🎲 اقتراح عشوائي":
         await random_command(update, context)
         return
@@ -952,20 +950,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif text == "🔍 بحث متقدم":
         await update.message.reply_text(
-        "🔍 <b>بحث متقدم</b>\n\n"
-        "يمكنك البحث باستخدام:\n"
-        "• اسم الأغنية\n"
-        "• كلمات من الأغنية\n"
-        "• الفئة (أغاني، أناشيد، زوامل، قصائد)\n\n"
-        "💡 جرب كتابة جزء من اسم الأغنية أو كلماتها\n\n"
-        "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n\n"
-        "🤖 <b>استمتع بالبحث مع الذكاء الاصطناعي:</b>\n"
-        "• <a href='https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0'>DeepSeek</a>\n"
-        "• <a href='https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0'>ChatGPT</a>",
-        parse_mode='HTML',
-        reply_markup=get_main_keyboard()
-    )
-    return
+            "🔍 <b>بحث متقدم</b>\n\n"
+            "يمكنك البحث باستخدام:\n"
+            "• اسم الأغنية\n"
+            "• كلمات من الأغنية\n"
+            "• الفئة (أغاني، أناشيد، زوامل، قصائد)\n\n"
+            "💡 جرب كتابة جزء من اسم الأغنية أو كلماتها\n\n"
+            "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n\n"
+            "🤖 <b>استمتع بالبحث مع الذكاء الاصطناعي:</b>\n"
+            "• <a href='https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0'>DeepSeek</a>\n"
+            "• <a href='https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0'>ChatGPT</a>",
+            parse_mode='HTML',
+            reply_markup=get_main_keyboard()
+        )
+        return
     
     elif text == "ℹ️ المساعدة" or text == "/help":
         await help_command(update, context)
@@ -991,7 +989,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await books_menu(update, context)
         return
     
-    # التحقق مما إذا كان المستخدم يختار من نتائج البحث
+    # ========== اختيار رقم من نتائج البحث ==========
     if text.isdigit() and 1 <= int(text) <= 5:
         search_key = None
         for key in user_search_results.keys():
@@ -1028,7 +1026,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 del user_search_results[search_key]
                 return
     
-    # البحث العادي
+    # ========== البحث العادي ==========
     user_info = get_user_info(user_id)
     can_search_bool, current_uses = can_search(user_id)
     
@@ -1040,9 +1038,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📊 <b>الحد المسموح:</b> {FREE_LIMIT} بحث يومياً\n"
             f"✅ <b>البحوث اليوم:</b> {current_uses}\n"
             f"🎯 <b>المتبقي:</b> {FREE_LIMIT - current_uses}\n\n"
-            f"💎 <b>للبحث غير المحدود، اشترك في الخطة المميزة!</b>\n\n"
-            f"💰 <b>الاشتراك المميز:</b> 10 دولار مدى الحياة\n\n"
-            f"اضغط على الزر أدناه للاشتراك:",
+            f"💎 <b>للبحث غير المحدود، اشترك في الخطة المميزة!</b>",
             parse_mode='HTML',
             reply_markup=reply_markup
         )
