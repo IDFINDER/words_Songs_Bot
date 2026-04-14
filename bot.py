@@ -891,26 +891,25 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     if query.data == "main_menu":
+        # إرسال القائمة الرئيسية كرسالة جديدة
         await start_command(update, context)
     
-    # معالجة أزرار الكتب
     elif query.data.startswith("books_page_"):
         page = int(query.data.replace("books_page_", ""))
         await books_menu(update, context, page=page)
     
     elif query.data.startswith("book_"):
         book_id = int(query.data.replace("book_", ""))
-        book = get_book_by_id(book_id)
-        if book:
-            await show_book_details(update, context, book_id)
+        await show_book_details(update, context, book_id)
     
     elif query.data.startswith("download_"):
         book_id = int(query.data.replace("download_", ""))
         book = get_book_by_id(book_id)
         if book:
-            await send_pdf_book(update, context, book)  # تمرير context و book
+            await send_pdf_book(update, context, book)
     
     elif query.data == "books_menu":
+        # العودة لقائمة الكتب
         await books_menu(update, context)
 
 
