@@ -916,14 +916,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة رسائل المستخدم"""
     text = update.message.text.strip()
-    # ⬇️⬇️⬇️ أضف هذا الجزء هنا في البداية ⬇️⬇️⬇️
     
-    # معالجة الأمر /getmsgid
+    # ========== معالجة الأمر /getmsgid ==========
     if text == "/getmsgid":
         await update.message.reply_text("📎 أرسل رابط الرسالة من القناة الآن\n\nمثال: https://t.me/c/3793691650/3")
         return
     
-    # معالجة روابط القناة
+    # ========== معالجة روابط القناة ==========
     if "t.me/c/" in text:
         try:
             parts = text.split("/")
@@ -937,11 +936,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
     
-    # ⬆️⬆️⬆️ ينتهي هنا ⬆️⬆️⬆️
     user_id = update.effective_user.id
     PAYMENT_URL = f"{APP_URL}/payment-poets"
     
-    # معالجة الأزرار
+    # ========== معالجة الأزرار ==========
     if text == "🎲 اقتراح عشوائي":
         await random_command(update, context)
         return
@@ -951,39 +949,170 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     elif text == "🔍 بحث متقدم":
-    # رسالة البحث المتقدم مع الذكاء الاصطناعي
-    search_text = (
-        "🔍 <b>بحث متقدم</b>\n\n"
-        "يمكنك البحث عن الأغاني والأناشيد بالطرق التالية:\n"
-        "• 📝 <b>اسم الأغنية</b> (كامل أو جزء منه)\n"
-        "• 🎵 <b>كلمات الأغنية</b> (أي مقطع منها)\n"
-        "• 📚 <b>الفئة</b> (أغاني، أناشيد، زوامل، قصائد)\n\n"
-        "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n\n"
-        "🤖 <b>استمتع بميزات الذكاء الاصطناعي المجانية!</b>\n"
-        "قم بطرح أسئلتك، كتابة قصائد، تلخيص نصوص، أو أي شيء يخطر ببالك\n\n"
-        "👇 <b>جرب الآن عبر البوتات التالية:</b>\n"
-        "⚠️ <i>تنبيه: هذه البوتات تابعة لأطراف خارجية وليست رسمية من OpenAI أو DeepSeek</i>"
-    )
-    
-    # أزرار الذكاء الاصطناعي
-    keyboard = [
-        [
-            InlineKeyboardButton("🧠 DeepSeek AI", url="https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0"),
-            InlineKeyboardButton("💬 ChatGPT AI", url="https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0")
+        # رسالة البحث المتقدم مع الذكاء الاصطناعي
+        search_text = (
+            "🔍 <b>بحث متقدم</b>\n\n"
+            "يمكنك البحث عن الأغاني والأناشيد بالطرق التالية:\n"
+            "• 📝 <b>اسم الأغنية</b> (كامل أو جزء منه)\n"
+            "• 🎵 <b>كلمات الأغنية</b> (أي مقطع منها)\n"
+            "• 📚 <b>الفئة</b> (أغاني، أناشيد، زوامل، قصائد)\n\n"
+            "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n\n"
+            "🤖 <b>استمتع بميزات الذكاء الاصطناعي المجانية!</b>\n"
+            "قم بطرح أسئلتك، كتابة قصائد، تلخيص نصوص، أو أي شيء يخطر ببالك\n\n"
+            "👇 <b>جرب الآن عبر البوتات التالية:</b>\n"
+            "⚠️ <i>تنبيه: هذه البوتات تابعة لأطراف خارجية وليست رسمية من OpenAI أو DeepSeek</i>"
+        )
+        
+        # أزرار الذكاء الاصطناعي
+        keyboard = [
+            [
+                InlineKeyboardButton("🧠 DeepSeek AI", url="https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0"),
+                InlineKeyboardButton("💬 ChatGPT AI", url="https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0")
+            ]
         ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            search_text,
+            parse_mode='HTML',
+            reply_markup=reply_markup
+        )
+        return
     
-    await update.message.reply_text(
-        search_text,
-        parse_mode='HTML',
-        reply_markup=reply_markup
-    )
-    return
+    elif text == "ℹ️ المساعدة" or text == "/help":
+        await help_command(update, context)
+        return
     
     elif text == "💎 اشتراك مميز" or text == "/premium":
         await premium_command(update, context)
         return
+    
+    elif text == "/mystats":
+        await my_stats_command(update, context)
+        return
+    
+    elif text == "📢 القناة":
+        await channel_command(update, context)
+        return
+    
+    elif text == "💬 المجموعة":
+        await group_command(update, context)
+        return
+    
+    elif text == "📚 كتب ومراجع":
+        await books_menu(update, context)
+        return
+    
+    # ========== التحقق مما إذا كان المستخدم يختار من نتائج البحث ==========
+    if text.isdigit() and 1 <= int(text) <= 5:
+        search_key = None
+        for key in user_search_results.keys():
+            if key.startswith(str(user_id)):
+                search_key = key
+                break
+        
+        if search_key and search_key in user_search_results:
+            results = user_search_results[search_key]
+            idx = int(text) - 1
+            if idx < len(results):
+                song = results[idx]['song']
+                
+                increment_usage(user_id)
+                
+                message, file_data = format_single_response(song, user_id)
+                
+                if file_data:
+                    await update.message.reply_text(message, parse_mode='HTML', reply_markup=get_main_keyboard())
+                    
+                    file_content, filename = file_data
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        f.write(file_content)
+                    
+                    with open(filename, 'rb') as f:
+                        await update.message.reply_document(
+                            document=f,
+                            filename=filename,
+                            caption="📄 ملف الكلمات الكاملة"
+                        )
+                    
+                    os.remove(filename)
+                
+                del user_search_results[search_key]
+                return
+    
+    # ========== البحث العادي ==========
+    user_info = get_user_info(user_id)
+    can_search_bool, current_uses = can_search(user_id)
+    
+    if not can_search_bool and user_info and user_info['status'] == 'free':
+        keyboard = [[InlineKeyboardButton("💎 الاشتراك المميز", web_app=WebAppInfo(url=PAYMENT_URL))]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            f"⚠️ <b>لقد وصلت للحد اليومي!</b>\n\n"
+            f"📊 <b>الحد المسموح:</b> {FREE_LIMIT} بحث يومياً\n"
+            f"✅ <b>البحوث اليوم:</b> {current_uses}\n"
+            f"🎯 <b>المتبقي:</b> {FREE_LIMIT - current_uses}\n\n"
+            f"💎 <b>للبحث غير المحدود، اشترك في الخطة المميزة!</b>\n\n"
+            f"💰 <b>الاشتراك المميز:</b> 10 دولار مدى الحياة\n\n"
+            f"اضغط على الزر أدناه للاشتراك:",
+            parse_mode='HTML',
+            reply_markup=reply_markup
+        )
+        return
+    
+    status_msg = await update.message.reply_text(f"⏳ جاري البحث عن: {escape_html(text)}...")
+    
+    results = search_multiple_songs(text)
+    
+    if not results:
+        await status_msg.edit_text(
+            f"❌ <b>لم أتمكن من العثور على أغنية باسم \"{escape_html(text)}\"</b>\n\n"
+            f"💡 جرب:\n"
+            f"• كتابة جزء من الكلمات\n"
+            f"• استخدام زر 🎲 اقتراح عشوائي\n"
+            f"• التأكد من صحة الاسم",
+            parse_mode='HTML',
+            reply_markup=get_main_keyboard()
+        )
+        return
+    
+    await status_msg.delete()
+    
+    if len(results) == 1:
+        song = results[0]['song']
+        increment_usage(user_id)
+        
+        message, file_data = format_single_response(song, user_id)
+        
+        if file_data:
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=get_main_keyboard())
+            
+            file_content, filename = file_data
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(file_content)
+            
+            with open(filename, 'rb') as f:
+                await update.message.reply_document(
+                    document=f,
+                    filename=filename,
+                    caption="📄 ملف الكلمات الكاملة"
+                )
+            
+            os.remove(filename)
+        
+        user_data = {
+            'user_id': user_id,
+            'first_name': update.effective_user.first_name,
+            'username': update.effective_user.username or 'لا يوجد'
+        }
+        send_admin_notification(user_data, query=text, song_name=song.get('name'))
+        
+    else:
+        search_key = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        user_search_results[search_key] = results
+        
+        results_text = format_search_results(results)
+        await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
     
     elif text == "/mystats":
         await my_stats_command(update, context)
