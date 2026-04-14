@@ -1602,7 +1602,7 @@ async def books_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, page=0)
 
 
 async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, book_id):
-    """عرض تفاصيل كتاب معين وخيار التحميل"""
+    """عرض تفاصيل كتاب معين وخيار التحميل - مع دعم صور Google Drive"""
     query = update.callback_query
     user_id = query.from_user.id
     user_info = get_user_info(user_id)
@@ -1632,7 +1632,37 @@ async def show_book_details(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
+    # ========== معالجة الصورة ==========
+    cover_url = book.get('cover_url')
+    
+    if cover_url:
+        # تحويل رابط Google Drive إلى رابط مباشر إذا لزم الأمر
+        if "drive.google.com" in cover_url:
+            # استخراج File ID من رابط Google Drive
+            import re
+            match = re.search(r'/d/([a-zA-Z0-9_-]+)', cover_url)
+            if match:
+                file_id = match.group(1)
+                cover_url = f"https://drive.google.com/uc?export=view&id={file_id}"
+        
+        try:
+            # محاولة إرسال الصورة مع النص
+            await query.message.reply_photo(
+                photo=cover_url,
+                caption=text,
+                parse_mode='HTML',
+                reply_markup=reply_markup
+            )
+            # حذف الرسالة الأصلية (التي كانت تظهر النص فقط)
+            await query.delete_message()
+            return
+        except Exception as e:
+            logger.error(f"Error sending cover: {e}")
+            # إذا فشلت الصورة، أرسل النص فقط
+            await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
+    else:
+        # لا توجد صورة، أرسل النص فقط
+        await query.edit_message_text(text, parse_mode='HTML', reply_markup=reply_markup)
         
 # =============================================================================
 # القسم 9: تشغيل الخادم (Flask + Telegram Bot)
