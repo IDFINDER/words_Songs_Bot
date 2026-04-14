@@ -822,7 +822,7 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 💎 <b>للاشتراك المميز:</b> /premium
 
-👨‍💻 <b>المطور:</b> @E_Alshabany
+👨‍💻 <b>المطور:</b> @Alshabany_Ai
 """
     await update.message.reply_text(about_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
