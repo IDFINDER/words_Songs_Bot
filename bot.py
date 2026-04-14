@@ -1488,24 +1488,25 @@ def get_book_by_id(book_id):
 
 
 async def send_pdf_book(update: Update, context: ContextTypes.DEFAULT_TYPE, book):
-    """إرسال ملف PDF للكتاب - باستخدام file_id"""
+    """إرسال ملف PDF باستخدام copy_message من القناة (بدون need for pdf_file_id)"""
     query = update.callback_query
     
     try:
-        # استخدم file_id من قاعدة البيانات
-        pdf_file_id = book.get('pdf_file_id')
+        pdf_message_id = book.get('pdf_message_id')
+        channel_id = BOOKS_CHANNEL_ID
         
-        if not pdf_file_id:
+        if not pdf_message_id:
             await query.edit_message_text("❌ عذراً، ملف هذا الكتاب غير متاح حالياً")
             return False
         
         # إعلام المستخدم
         await query.edit_message_text("⏳ جاري تحميل الكتاب...")
         
-        # إرسال الملف مباشرة
-        await context.bot.send_document(
+        # نسخ الملف من القناة مباشرة
+        await context.bot.copy_message(
             chat_id=query.from_user.id,
-            document=pdf_file_id,
+            from_chat_id=channel_id,
+            message_id=int(pdf_message_id),
             caption=f"📚 <b>{book.get('title', 'كتاب')}</b>\n\n"
                    f"✍️ <b>المؤلف:</b> {book.get('author', 'غير معروف')}\n"
                    f"📖 <b>التصنيف:</b> {book.get('category', 'عام')}",
