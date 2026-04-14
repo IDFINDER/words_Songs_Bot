@@ -951,17 +951,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     elif text == "🔍 بحث متقدم":
-        await update.message.reply_text(
-            "🔍 <b>بحث متقدم</b>\n\n"
-            "يمكنك البحث باستخدام:\n"
-            "• اسم الأغنية\n"
-            "• كلمات من الأغنية\n"
-            "• الفئة (أغاني، أناشيد، زوامل، قصائد)\n\n"
-            "💡 جرب كتابة جزء من اسم الأغنية أو كلماتها",
-            parse_mode='HTML',
-            reply_markup=get_main_keyboard()
-        )
-        return
+    await update.message.reply_text(
+        "🔍 <b>بحث متقدم</b>\n\n"
+        "يمكنك البحث باستخدام:\n"
+        "• اسم الأغنية\n"
+        "• كلمات من الأغنية\n"
+        "• الفئة (أغاني، أناشيد، زوامل، قصائد)\n\n"
+        "💡 جرب كتابة جزء من اسم الأغنية أو كلماتها\n\n"
+        "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n\n"
+        "🤖 <b>استمتع بالبحث مع الذكاء الاصطناعي:</b>\n"
+        "• <a href='https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0'>DeepSeek</a>\n"
+        "• <a href='https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0'>ChatGPT</a>",
+        parse_mode='HTML',
+        reply_markup=get_main_keyboard()
+    )
+    return
     
     elif text == "ℹ️ المساعدة" or text == "/help":
         await help_command(update, context)
