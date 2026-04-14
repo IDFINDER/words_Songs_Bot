@@ -1462,7 +1462,7 @@ def api_poets_users():
 # =============================================================================
 
 BOOKS_CHANNEL_ID = os.environ.get('BOOKS_CHANNEL_ID', '-1003793691650')
-BOOKS_PER_PAGE = 5
+BOOKS_PER_PAGE = 10
 
 def get_books_list():
     """جلب قائمة الكتب من قاعدة البيانات"""
