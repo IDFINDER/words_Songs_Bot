@@ -871,7 +871,20 @@ async def group_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+# ⬇️⬇️⬇️ أضف هذه الدالة هنا ⬇️⬇️⬇️
 
+async def get_message_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """الحصول على message_id من رابط الرسالة"""
+    text = update.message.text
+    if "t.me" in text:
+        # استخراج message_id من الرابط
+        parts = text.split("/")
+        message_id = int(parts[-1])
+        await update.message.reply_text(f"✅ Message ID: {message_id}")
+    else:
+        await update.message.reply_text("⚠️ أرسل رابط رسالة من القناة")
+
+# ⬆️⬆️⬆️ حتى هنا ⬆️⬆️⬆️
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """معالجة الأزرار"""
     query = update.callback_query
@@ -1063,21 +1076,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         results_text = format_search_results(results)
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
-
-        async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """أمر مؤقت للحصول على file_id من الملف المرسل"""
-    if update.message.document:
-        file_id = update.message.document.file_id
-        file_name = update.message.document.file_name
-        await update.message.reply_text(
-            f"✅ <b>تم استلام الملف</b>\n\n"
-            f"📄 <b>اسم الملف:</b> {file_name}\n"
-            f"🆔 <b>File ID:</b>\n<code>{file_id}</code>\n\n"
-            f"📋 انسخ هذا الـ ID وأضفه في قاعدة البيانات",
-            parse_mode='HTML'
-        )
-    else:
-        await update.message.reply_text("⚠️ أرسل ملف PDF للحصول على File ID")
 
 
 # =============================================================================
@@ -1628,10 +1626,10 @@ def run_telegram_bot():
     application.add_handler(CommandHandler("mystats", my_stats_command))
     application.add_handler(CommandHandler("premium", premium_command))
     application.add_handler(CommandHandler("random", random_command))
+    application.add_handler(CommandHandler("getmsgid", get_message_id))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(CallbackQueryHandler(button_callback))
-    application.add_handler(CommandHandler("getfileid", get_file_id))
-    application.add_handler(MessageHandler(filters.Document.ALL, get_file_id))
+    
     
     print("="*60)
     print("🎵 بوت كلمات و شعراء - نسخة متكاملة مع لوحة تحكم")
