@@ -1037,6 +1037,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         results_text = format_search_results(results)
         await update.message.reply_text(results_text, parse_mode='HTML', reply_markup=get_main_keyboard())
 
+        elif text == "📚 كتب ومراجع":
+    await books_menu(update, context)
+    return
+
 
 # =============================================================================
 # القسم 8: مسارات Flask (لوحة التحكم وصفحة الدفع)
