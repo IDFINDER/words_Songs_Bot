@@ -1325,6 +1325,13 @@ LOGIN_FORM = '''
 </html>
 '''
 
+# ⬇️⬇️⬇️ أضف هذا هنا ⬇️⬇️⬇️
+@app.route('/admin-logout')
+def admin_logout():
+    """تسجيل الخروج من لوحة التحكم"""
+    session.pop('logged_in', None)
+    return redirect(url_for('admin_poets'))
+# ⬆️⬆️⬆️ حتى هنا ⬆️⬆️⬆️
 
 @app.route('/payment-poets')
 def payment_poets():
