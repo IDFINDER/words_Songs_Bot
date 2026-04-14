@@ -951,17 +951,34 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     elif text == "🔍 بحث متقدم":
-        await update.message.reply_text(
-            "🔍 <b>بحث متقدم</b>\n\n"
-            "يمكنك البحث باستخدام:\n"
-            "• اسم الأغنية\n"
-            "• كلمات من الأغنية\n"
-            "• الفئة (أغاني، أناشيد، زوامل، قصائد)\n\n"
-            "💡 جرب كتابة جزء من اسم الأغنية أو كلماتها",
-            parse_mode='HTML',
-            reply_markup=get_main_keyboard()
-        )
-        return
+    # رسالة البحث المتقدم مع الذكاء الاصطناعي
+    search_text = (
+        "🔍 <b>بحث متقدم</b>\n\n"
+        "يمكنك البحث عن الأغاني والأناشيد بالطرق التالية:\n"
+        "• 📝 <b>اسم الأغنية</b> (كامل أو جزء منه)\n"
+        "• 🎵 <b>كلمات الأغنية</b> (أي مقطع منها)\n"
+        "• 📚 <b>الفئة</b> (أغاني، أناشيد، زوامل، قصائد)\n\n"
+        "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─\n\n"
+        "🤖 <b>استمتع بميزات الذكاء الاصطناعي المجانية!</b>\n"
+        "قم بطرح أسئلتك، كتابة قصائد، تلخيص نصوص، أو أي شيء يخطر ببالك\n\n"
+        "👇 <b>جرب الآن عبر البوتات التالية:</b>"
+    )
+    
+    # أزرار الذكاء الاصطناعي
+    keyboard = [
+        [
+            InlineKeyboardButton("🧠 DeepSeek AI", url="https://t.me/deepseek_gidbot?start=_tgr_nZtWqqZlYzY0"),
+            InlineKeyboardButton("💬 ChatGPT AI", url="https://t.me/chatgpt_gidbot?start=_tgr_LyPxvdhhNDU0")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        search_text,
+        parse_mode='HTML',
+        reply_markup=reply_markup
+    )
+    return
     
     elif text == "ℹ️ المساعدة" or text == "/help":
         await help_command(update, context)
