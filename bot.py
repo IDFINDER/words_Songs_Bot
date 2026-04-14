@@ -521,11 +521,12 @@ def format_single_response(song, user_id=None):
 # =============================================================================
 
 def get_main_keyboard():
-    """لوحة المفاتيح الرئيسية - تحتوي على أزرار القناة والمجموعة"""
+    """لوحة المفاتيح الرئيسية"""
     keyboard = [
         [KeyboardButton("🎲 اقتراح عشوائي"), KeyboardButton("🏠 الرئيسية")],
         [KeyboardButton("🔍 بحث متقدم"), KeyboardButton("ℹ️ المساعدة")],
-        [KeyboardButton("💎 اشتراك مميز"), KeyboardButton("📢 القناة"), KeyboardButton("💬 المجموعة")]
+        [KeyboardButton("💎 اشتراك مميز"), KeyboardButton("📚 كتب ومراجع")],
+        [KeyboardButton("📢 القناة"), KeyboardButton("💬 المجموعة")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -534,7 +535,8 @@ def get_help_keyboard():
     """لوحة مفاتيح المساعدة"""
     keyboard = [
         [KeyboardButton("🏠 الرئيسية"), KeyboardButton("🎲 اقتراح عشوائي")],
-        [KeyboardButton("💎 اشتراك مميز"), KeyboardButton("📢 القناة"), KeyboardButton("💬 المجموعة")]
+        [KeyboardButton("💎 اشتراك مميز"), KeyboardButton("📚 كتب ومراجع")],
+        [KeyboardButton("📢 القناة"), KeyboardButton("💬 المجموعة")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
