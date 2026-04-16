@@ -418,7 +418,7 @@ def get_users_with_subscriptions():
 
 @app.route('/send-notification', methods=['POST'])
 def send_notification():
-    """إرسال إشعارات للمستخدمين"""
+    """إرسال إشعارات للمستخدمين مع تسجيل في قاعدة البيانات"""
     if not session.get('logged_in'):
         return jsonify({'success': False, 'message': 'غير مصرح'}), 401
     
@@ -433,31 +433,85 @@ def send_notification():
     import requests
     users_to_notify = []
     
+    # تحديد المستخدمين المستهدفين
     if target == 'user' and user_id:
         users_to_notify = [int(user_id)]
+        notification_type = 'individual'
+        target_audience = f'user_{user_id}'
     elif target == 'all_premium':
         response = supabase.table('users_poets_bot').select('user_id').eq('status', 'premium').execute()
         users_to_notify = [u['user_id'] for u in (response.data or [])]
+        notification_type = 'broadcast'
+        target_audience = 'all_premium'
     elif target == 'half_yearly':
-        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').eq('subscription_plans_poets.name', 'half_yearly').execute()
-        users_to_notify = [u['user_id'] for u in (response.data or [])]
+        # جلب مستخدمي الخطة نصف السنوي
+        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').execute()
+        half_yearly_users = []
+        for sub in (response.data or []):
+            plan_response = supabase.table('subscription_plans_poets').select('name').eq('id', sub['plan_id']).execute()
+            if plan_response.data and plan_response.data[0]['name'] == 'half_yearly':
+                half_yearly_users.append(sub['user_id'])
+        users_to_notify = half_yearly_users
+        notification_type = 'broadcast'
+        target_audience = 'half_yearly'
     elif target == 'yearly':
-        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').eq('subscription_plans_poets.name', 'yearly').execute()
-        users_to_notify = [u['user_id'] for u in (response.data or [])]
+        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').execute()
+        yearly_users = []
+        for sub in (response.data or []):
+            plan_response = supabase.table('subscription_plans_poets').select('name').eq('id', sub['plan_id']).execute()
+            if plan_response.data and plan_response.data[0]['name'] == 'yearly':
+                yearly_users.append(sub['user_id'])
+        users_to_notify = yearly_users
+        notification_type = 'broadcast'
+        target_audience = 'yearly'
     elif target == 'lifetime':
-        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').eq('subscription_plans_poets.name', 'lifetime').execute()
-        users_to_notify = [u['user_id'] for u in (response.data or [])]
+        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').execute()
+        lifetime_users = []
+        for sub in (response.data or []):
+            plan_response = supabase.table('subscription_plans_poets').select('name').eq('id', sub['plan_id']).execute()
+            if plan_response.data and plan_response.data[0]['name'] == 'lifetime':
+                lifetime_users.append(sub['user_id'])
+        users_to_notify = lifetime_users
+        notification_type = 'broadcast'
+        target_audience = 'lifetime'
+    else:
+        return jsonify({'success': False, 'message': 'هدف غير صحيح'})
+    
+    if not users_to_notify:
+        return jsonify({'success': False, 'message': 'لا يوجد مستخدمين مستهدفين'})
+    
+    # تسجيل الإشعار في قاعدة البيانات
+    notification_id = log_notification(notification_type, target_audience, int(user_id) if user_id else None, message)
     
     sent_count = 0
     for uid in users_to_notify:
         try:
             api_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-            requests.post(api_url, data={'chat_id': uid, 'text': message, 'parse_mode': 'HTML'}, timeout=5)
-            sent_count += 1
+            response = requests.post(api_url, data={'chat_id': uid, 'text': message, 'parse_mode': 'HTML'}, timeout=5)
+            
+            if response.status_code == 200:
+                sent_count += 1
+                # تسجيل الإرسال الناجح
+                if notification_id:
+                    log_notification_delivery(notification_id, uid, 'sent')
+            else:
+                # تسجيل الإرسال الفاشل
+                if notification_id:
+                    log_notification_delivery(notification_id, uid, 'failed')
+                    
         except Exception as e:
             logger.error(f"Error sending to {uid}: {e}")
+            if notification_id:
+                log_notification_delivery(notification_id, uid, 'failed')
     
-    return jsonify({'success': True, 'message': f'تم إرسال الإشعار إلى {sent_count} مستخدم'})
+    # تحديث عدد الإرسال في سجل الإشعار
+    if notification_id:
+        try:
+            supabase.table('notification_log_poets').update({'sent_count': sent_count}).eq('id', notification_id).execute()
+        except Exception as e:
+            logger.error(f"Error updating sent_count: {e}")
+    
+    return jsonify({'success': True, 'message': f'تم إرسال الإشعار إلى {sent_count} من {len(users_to_notify)} مستخدم'})
 # =============================================================================
 # القسم 5: دوال الأسعار المتغيرة والاشتراكات
 # =============================================================================
