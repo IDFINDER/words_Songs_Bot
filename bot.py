@@ -366,7 +366,98 @@ def send_admin_notification(user_data, query=None, song_name=None):
     except Exception as e:
         logger.error(f"Error sending admin notification: {e}")
 
+def get_subscription_stats():
+    """إحصائيات خطط الاشتراك"""
+    try:
+        response = supabase.table('user_subscriptions_poets').select('*, subscription_plans_poets(name)').eq('status', 'active').execute()
+        
+        half_yearly_count = 0
+        yearly_count = 0
+        lifetime_count = 0
+        
+        for sub in (response.data or []):
+            plan_name = sub.get('subscription_plans_poets', {}).get('name', '')
+            if plan_name == 'half_yearly':
+                half_yearly_count += 1
+            elif plan_name == 'yearly':
+                yearly_count += 1
+            elif plan_name == 'lifetime':
+                lifetime_count += 1
+        
+        return {
+            'half_yearly_count': half_yearly_count,
+            'yearly_count': yearly_count,
+            'lifetime_count': lifetime_count
+        }
+    except Exception as e:
+        logger.error(f"Error getting subscription stats: {e}")
+        return {'half_yearly_count': 0, 'yearly_count': 0, 'lifetime_count': 0}
 
+
+def get_users_with_subscriptions():
+    """جلب المستخدمين مع معلومات اشتراكاتهم"""
+    try:
+        users = get_all_users()
+        
+        for user in users:
+            user['subscription_plan'] = None
+            user['subscription_start'] = None
+            
+            if user['status'] == 'premium':
+                sub_response = supabase.table('user_subscriptions_poets').select('*, subscription_plans_poets(name)').eq('user_id', user['user_id']).eq('status', 'active').execute()
+                if sub_response.data:
+                    sub = sub_response.data[0]
+                    user['subscription_plan'] = sub.get('subscription_plans_poets', {}).get('name')
+                    user['subscription_start'] = sub.get('start_date')
+        
+        return users
+    except Exception as e:
+        logger.error(f"Error getting users with subscriptions: {e}")
+        return get_all_users()
+
+
+@app.route('/send-notification', methods=['POST'])
+def send_notification():
+    """إرسال إشعارات للمستخدمين"""
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'message': 'غير مصرح'}), 401
+    
+    data = request.get_json()
+    target = data.get('target')
+    user_id = data.get('user_id')
+    message = data.get('message')
+    
+    if not message:
+        return jsonify({'success': False, 'message': 'الرسالة مطلوبة'})
+    
+    import requests
+    users_to_notify = []
+    
+    if target == 'user' and user_id:
+        users_to_notify = [int(user_id)]
+    elif target == 'all_premium':
+        response = supabase.table('users_poets_bot').select('user_id').eq('status', 'premium').execute()
+        users_to_notify = [u['user_id'] for u in (response.data or [])]
+    elif target == 'half_yearly':
+        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').eq('subscription_plans_poets.name', 'half_yearly').execute()
+        users_to_notify = [u['user_id'] for u in (response.data or [])]
+    elif target == 'yearly':
+        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').eq('subscription_plans_poets.name', 'yearly').execute()
+        users_to_notify = [u['user_id'] for u in (response.data or [])]
+    elif target == 'lifetime':
+        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').eq('subscription_plans_poets.name', 'lifetime').execute()
+        users_to_notify = [u['user_id'] for u in (response.data or [])]
+    
+    sent_count = 0
+    for uid in users_to_notify:
+        try:
+            api_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+            requests.post(api_url, data={'chat_id': uid, 'text': message, 'parse_mode': 'HTML'}, timeout=5)
+            sent_count += 1
+        except Exception as e:
+            logger.error(f"Error sending to {uid}: {e}")
+    
+    return jsonify({'success': True, 'message': f'تم إرسال الإشعار إلى {sent_count} مستخدم'})
 # =============================================================================
 # القسم 5: دوال الأسعار المتغيرة والاشتراكات
 # =============================================================================
