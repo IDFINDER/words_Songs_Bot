@@ -25,7 +25,6 @@
             position: relative;
         }
         .header h1 { font-size: 2rem; margin-bottom: 10px; }
-        .header h1 i { margin-left: 10px; }
         .header p { opacity: 0.9; }
         .logout-btn {
             position: absolute;
@@ -38,33 +37,46 @@
             border-radius: 10px;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: all 0.3s;
             text-decoration: none;
-            display: inline-block;
         }
-        .logout-btn:hover {
-            background: #dc3545;
-            transform: scale(1.02);
+        .logout-btn:hover { background: #dc3545; }
+        .nav-buttons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
         }
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: none;
+        }
+        .nav-btn:hover { background: #e94560; }
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
             margin-bottom: 30px;
         }
         .stat-card {
             background: rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
             border-radius: 16px;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
             transition: transform 0.2s;
             border: 1px solid rgba(255,255,255,0.1);
         }
         .stat-card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.15); }
-        .stat-number { font-size: 2.5rem; font-weight: bold; background: linear-gradient(135deg, #e94560, #533483); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .stat-label { color: #aaa; font-size: 0.85rem; margin-top: 5px; }
+        .stat-number { font-size: 2rem; font-weight: bold; background: linear-gradient(135deg, #e94560, #533483); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .stat-label { color: #aaa; font-size: 0.75rem; margin-top: 5px; }
         
         .charts-section {
             display: grid;
@@ -82,11 +94,11 @@
         .chart-card h3 {
             color: #e94560;
             margin-bottom: 15px;
-            font-size: 1.1rem;
+            font-size: 1rem;
             border-right: 3px solid #e94560;
             padding-right: 12px;
         }
-        .chart-container { position: relative; height: 260px; }
+        .chart-container { position: relative; height: 250px; }
         
         .search-section {
             background: rgba(255,255,255,0.05);
@@ -94,7 +106,6 @@
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
         }
         .search-box {
             display: flex;
@@ -109,13 +120,8 @@
             font-size: 1rem;
             background: rgba(0,0,0,0.3);
             color: white;
-            font-family: inherit;
         }
-        .search-input:focus {
-            outline: none;
-            border-color: #e94560;
-        }
-        .search-input::placeholder { color: #888; }
+        .search-input:focus { outline: none; border-color: #e94560; }
         .search-btn, .clear-btn {
             background: #e94560;
             color: white;
@@ -123,10 +129,8 @@
             padding: 12px 25px;
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.2s;
         }
         .clear-btn { background: #533483; }
-        .search-btn:hover, .clear-btn:hover { opacity: 0.9; transform: scale(1.02); }
         
         .users-section {
             background: rgba(255,255,255,0.05);
@@ -135,7 +139,6 @@
             padding: 20px;
             overflow-x: auto;
             margin-bottom: 30px;
-            border: 1px solid rgba(255,255,255,0.1);
         }
         .section-header {
             display: flex;
@@ -145,7 +148,7 @@
             flex-wrap: wrap;
             gap: 15px;
         }
-        .refresh-btn {
+        .refresh-btn, .notify-btn {
             background: #e94560;
             color: white;
             border: none;
@@ -153,74 +156,85 @@
             border-radius: 10px;
             cursor: pointer;
         }
+        .notify-btn { background: #28a745; }
         
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; }
         th { background: rgba(0,0,0,0.3); color: #e94560; font-weight: 600; }
         tr:hover { background: rgba(255,255,255,0.05); }
-        .premium-badge {
-            background: linear-gradient(135deg, #e94560, #533483);
+        
+        .badge-premium { background: linear-gradient(135deg, #e94560, #533483); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .badge-free { background: rgba(255,255,255,0.2); color: #aaa; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .badge-half { background: #ffc107; color: #1a1a2e; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .badge-yearly { background: #28a745; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .badge-lifetime { background: #e94560; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        
+        .usage-badge { background: #e94560; color: white; padding: 4px 10px; border-radius: 16px; font-size: 0.7rem; }
+        .total-badge { background: #533483; color: white; padding: 4px 10px; border-radius: 16px; font-size: 0.7rem; }
+        
+        .upgrade-btn, .downgrade-btn {
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            margin: 2px;
+        }
+        .upgrade-btn { background: #28a745; color: white; }
+        .downgrade-btn { background: #dc3545; color: white; }
+        .send-msg-btn { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; margin: 2px; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #1a1a2e;
+            padding: 25px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid #e94560;
+        }
+        .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
             color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            display: inline-block;
+            font-family: inherit;
+            margin: 15px 0;
         }
-        .free-badge {
-            background: rgba(255,255,255,0.2);
-            color: #aaa;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            display: inline-block;
-        }
-        .usage-badge {
+        .modal-content button {
             background: #e94560;
             color: white;
-            padding: 4px 12px;
-            border-radius: 16px;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-        .total-badge {
-            background: #533483;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 16px;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-        .upgrade-btn {
-            background: #28a745;
-            color: white;
             border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: 10px 20px;
+            border-radius: 10px;
             cursor: pointer;
+            margin: 5px;
         }
-        .downgrade-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
+        .modal-content .close {
+            background: #6c757d;
         }
-        .footer { text-align: center; margin-top: 30px; padding: 20px; color: #888; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); }
-        .no-results { text-align: center; padding: 40px; color: #888; }
+        .footer { text-align: center; margin-top: 30px; padding: 20px; color: #888; font-size: 0.7rem; border-top: 1px solid rgba(255,255,255,0.1); }
+        .footer a { color: #e94560; text-decoration: none; }
         
         @media (max-width: 768px) {
             .charts-section { grid-template-columns: 1fr; }
-            th, td { font-size: 0.7rem; padding: 8px; }
-            .search-box { flex-direction: column; }
-            .search-btn, .clear-btn { width: 100%; }
-            .logout-btn { position: static; margin-bottom: 15px; display: inline-block; }
-        }
-        
-        .bot-icon {
-            width: 30px;
-            vertical-align: middle;
-            margin-left: 5px;
+            th, td { font-size: 0.65rem; padding: 5px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .nav-buttons { position: static; justify-content: center; margin-top: 15px; }
+            .logout-btn { position: static; margin-bottom: 10px; display: inline-block; }
         }
     </style>
 </head>
@@ -228,37 +242,53 @@
     <div class="container">
         <div class="header">
             <a href="/admin-logout" class="logout-btn">🚪 خروج</a>
+            <div class="nav-buttons">
+                <a href="/admin-prices" class="nav-btn">💰 تعديل الأسعار</a>
+                <a href="/admin-poets" class="nav-btn">📊 تحديث</a>
+            </div>
             <h1>📖 لوحة إدارة بوت كلمات وشعراء</h1>
             <p>@poets_words_bot | إدارة المستخدمين | إحصائيات تفصيلية | نظام اشتراك مميز</p>
         </div>
         
+        <!-- بطاقات الإحصائيات -->
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-number">{{ stats.total_users }}</div><div class="stat-label">👥 إجمالي المستخدمين</div></div>
-            <div class="stat-card"><div class="stat-number">{{ stats.premium_users }}</div><div class="stat-label">👑 مستخدمين مميزين</div></div>
-            <div class="stat-card"><div class="stat-number">{{ stats.free_users }}</div><div class="stat-label">🎁 مستخدمين مجانيين</div></div>
+            <div class="stat-card"><div class="stat-number">{{ stats.premium_users }}</div><div class="stat-label">👑 إجمالي المميزين</div></div>
+            <div class="stat-card"><div class="stat-number">{{ stats.free_users }}</div><div class="stat-label">🎁 مجانيين</div></div>
+            <div class="stat-card"><div class="stat-number">{{ stats.half_yearly_count }}</div><div class="stat-label">📅 نصف سنوي</div></div>
+            <div class="stat-card"><div class="stat-number">{{ stats.yearly_count }}</div><div class="stat-label">🎉 سنوي</div></div>
+            <div class="stat-card"><div class="stat-number">{{ stats.lifetime_count }}</div><div class="stat-label">💎 مدى الحياة</div></div>
             <div class="stat-card"><div class="stat-number">{{ stats.total_searches }}</div><div class="stat-label">🔍 إجمالي البحوث</div></div>
             <div class="stat-card"><div class="stat-number">{{ stats.total_songs }}</div><div class="stat-label">🎵 إجمالي الأغاني</div></div>
         </div>
         
+        <!-- الرسوم البيانية -->
         <div class="charts-section">
             <div class="chart-card">
                 <h3>📊 توزيع المستخدمين</h3>
-                <div class="chart-container">
-                    <canvas id="userDistributionChart"></canvas>
-                </div>
+                <div class="chart-container"><canvas id="userDistributionChart"></canvas></div>
             </div>
             <div class="chart-card">
-                <h3>📈 الاستخدامات اليومية (آخر 7 أيام)</h3>
-                <div class="chart-container">
-                    <canvas id="dailyUsageChart"></canvas>
-                </div>
+                <h3>📈 توزيع خطط الاشتراك</h3>
+                <div class="chart-container"><canvas id="plansDistributionChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>📊 الاستخدامات اليومية (آخر 7 أيام)</h3>
+                <div class="chart-container"><canvas id="dailyUsageChart"></canvas></div>
             </div>
         </div>
         
+        <!-- قائمة المستخدمين -->
         <div class="users-section">
             <div class="section-header">
                 <h2>📋 قائمة المستخدمين</h2>
-                <button class="refresh-btn" onclick="location.reload()">🔄 تحديث</button>
+                <div>
+                    <button class="notify-btn" onclick="openNotifyModal('all_premium')">📢 إشعار لجميع المميزين</button>
+                    <button class="notify-btn" onclick="openNotifyModal('half_yearly')">📅 إشعار لنصف سنوي</button>
+                    <button class="notify-btn" onclick="openNotifyModal('yearly')">🎉 إشعار لسنوي</button>
+                    <button class="notify-btn" onclick="openNotifyModal('lifetime')">💎 إشعار لمدى الحياة</button>
+                    <button class="refresh-btn" onclick="location.reload()">🔄 تحديث</button>
+                </div>
             </div>
             
             <div class="search-section">
@@ -277,10 +307,12 @@
                             <th>الاسم</th>
                             <th>اليوزرنيم</th>
                             <th>الحالة</th>
-                            <th>ينتهي في</th>
-                            <th>🔍 البحوث اليوم</th>
-                            <th>📊 إجمالي البحوث</th>
-                            <th>الإجراء</th>
+                            <th>الخطة</th>
+                            <th>تاريخ البداية</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>📊 البحوث اليوم</th>
+                            <th>📈 إجمالي البحوث</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -289,15 +321,33 @@
                             <td>{{ user.user_id }}</td>
                             <td>{{ user.first_name }}</td>
                             <td>@{{ user.username }}</td>
-                            <td>{% if user.status == 'premium' %}<span class="premium-badge">👑 مميز</span>{% else %}<span class="free-badge">🎁 مجاني</span>{% endif %}</td>
+                            <td>{% if user.status == 'premium' %}<span class="badge-premium">👑 مميز</span>{% else %}<span class="badge-free">🎁 مجاني</span>{% endif %}</td>
+                            <td>
+                                {% if user.subscription_plan == 'half_yearly' %}
+                                    <span class="badge-half">📅 نصف سنوي</span>
+                                {% elif user.subscription_plan == 'yearly' %}
+                                    <span class="badge-yearly">🎉 سنوي</span>
+                                {% elif user.subscription_plan == 'lifetime' %}
+                                    <span class="badge-lifetime">💎 مدى الحياة</span>
+                                {% else %}
+                                    <span class="badge-free">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.subscription_start or '-' }}</td>
                             <td>{{ user.premium_until or '-' }}</td>
                             <td><span class="usage-badge">{{ user.daily_uses|default(0) }}/{{ free_limit }}</span></td>
                             <td><span class="total-badge">📊 {{ user.total_uses|default(0) }}</span></td>
                             <td>
                                 {% if user.status == 'free' %}
+                                    <select id="plan_{{ user.user_id }}" style="background:#1a1a2e; color:white; border:1px solid #e94560; border-radius:6px; padding:4px; font-size:0.7rem;">
+                                        <option value="half_yearly">نصف سنوي - 30$</option>
+                                        <option value="yearly">سنوي - 48$</option>
+                                        <option value="lifetime">مدى الحياة - 100$</option>
+                                    </select>
                                     <form method="POST" action="/upgrade-user-poets" style="display:inline;">
                                         <input type="hidden" name="user_id" value="{{ user.user_id }}">
-                                        <button type="submit" class="upgrade-btn">⭐ ترقية</button>
+                                        <input type="hidden" name="plan_type" id="plan_input_{{ user.user_id }}" value="half_yearly">
+                                        <button type="submit" class="upgrade-btn" onclick="setPlan('{{ user.user_id }}')">⭐ ترقية</button>
                                     </form>
                                 {% else %}
                                     <form method="POST" action="/downgrade-user-poets" style="display:inline;">
@@ -305,21 +355,32 @@
                                         <button type="submit" class="downgrade-btn">📉 خفض</button>
                                     </form>
                                 {% endif %}
+                                <button class="send-msg-btn" onclick="openNotifyModal('user', '{{ user.user_id }}', '{{ user.first_name }}')">📨 رسالة</button>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-                <div id="noResults" class="no-results" style="display: none;">❌ لا توجد نتائج مطابقة للبحث</div>
+                <div id="noResults" class="no-results" style="display: none; text-align:center; padding:40px;">❌ لا توجد نتائج مطابقة للبحث</div>
             </div>
         </div>
         
         <div class="footer">
             🤖 بوت كلمات وشعراء - @poets_words_bot | آخر تحديث: {{ stats.last_update }}
-            <br>
-            📢 قناة البوت: @poets_words | 💬 مجموعة النقاش: @poetswords
-            <br><br>
-            👨‍💻 <b>تطوير:</b> <a href="https://t.me/Alshabany_Ai" style="color: #e94560; text-decoration: none;">@Alshabany_Ai</a>
+            <br>📢 قناة البوت: @poets_words | 💬 مجموعة النقاش: @poetswords
+            <br><br>👨‍💻 <b>تطوير:</b> <a href="https://t.me/Alshabany_Ai">@Alshabany_Ai</a>
+        </div>
+    </div>
+    
+    <!-- نافذة الإشعارات المنبثقة -->
+    <div id="notifyModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">📢 إرسال إشعار</h3>
+            <textarea id="notificationMessage" rows="4" placeholder="اكتب رسالتك هنا..."></textarea>
+            <input type="hidden" id="notifyTarget" value="">
+            <input type="hidden" id="notifyUserId" value="">
+            <button onclick="sendNotification()">📨 إرسال</button>
+            <button class="close" onclick="closeNotifyModal()">إلغاء</button>
         </div>
     </div>
     
@@ -328,103 +389,102 @@
         const userCtx = document.getElementById('userDistributionChart').getContext('2d');
         new Chart(userCtx, {
             type: 'doughnut',
-            data: {
-                labels: ['مستخدمين مميزين', 'مستخدمين مجانيين'],
-                datasets: [{
-                    data: [{{ stats.premium_users }}, {{ stats.free_users }}],
-                    backgroundColor: ['#e94560', '#533483'],
-                    borderWidth: 0,
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { color: '#ccc' } },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                return `${label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
-                },
-                cutout: '65%'
-            }
+            data: { labels: ['مستخدمين مميزين', 'مستخدمين مجانيين'], datasets: [{ data: [{{ stats.premium_users }}, {{ stats.free_users }}], backgroundColor: ['#e94560', '#533483'], borderWidth: 0, hoverOffset: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ccc' } } }, cutout: '65%' }
+        });
+        
+        // رسم بياني لتوزيع خطط الاشتراك
+        const plansCtx = document.getElementById('plansDistributionChart').getContext('2d');
+        new Chart(plansCtx, {
+            type: 'bar',
+            data: { labels: ['نصف سنوي', 'سنوي', 'مدى الحياة'], datasets: [{ label: 'عدد المشتركين', data: [{{ stats.half_yearly_count }}, {{ stats.yearly_count }}, {{ stats.lifetime_count }}], backgroundColor: ['#ffc107', '#28a745', '#e94560'], borderRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { color: '#ccc' } } }, scales: { y: { beginAtZero: true, ticks: { color: '#ccc' } }, x: { ticks: { color: '#ccc' } } } }
         });
         
         // رسم بياني للاستخدامات اليومية
         const dailyCtx = document.getElementById('dailyUsageChart').getContext('2d');
         new Chart(dailyCtx, {
             type: 'line',
-            data: {
-                labels: {{ daily_labels|tojson }},
-                datasets: [{
-                    label: 'عدد البحوث',
-                    data: {{ daily_data|tojson }},
-                    borderColor: '#e94560',
-                    backgroundColor: 'rgba(233, 69, 96, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#e94560',
-                    pointBorderColor: '#fff',
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { labels: { color: '#ccc' } }
-                },
-                scales: {
-                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' } },
-                    x: { grid: { display: false }, ticks: { color: '#ccc' } }
-                }
-            }
+            data: { labels: {{ daily_labels|tojson }}, datasets: [{ label: 'عدد البحوث', data: {{ daily_data|tojson }}, borderColor: '#e94560', backgroundColor: 'rgba(233, 69, 96, 0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#e94560', pointBorderColor: '#fff', pointRadius: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ccc' } } }, scales: { y: { beginAtZero: true, ticks: { color: '#ccc' } }, x: { ticks: { color: '#ccc' } } } }
         });
+        
+        function setPlan(userId) {
+            const select = document.getElementById('plan_' + userId);
+            const input = document.getElementById('plan_input_' + userId);
+            input.value = select.value;
+        }
         
         function filterUsers() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const term = document.getElementById('searchInput').value.toLowerCase().trim();
             const rows = document.querySelectorAll('#usersTable tbody tr');
             let hasResults = false;
-            
             rows.forEach(row => {
-                const userId = row.getAttribute('data-user-id')?.toLowerCase() || '';
-                const name = row.getAttribute('data-name')?.toLowerCase() || '';
-                const username = row.getAttribute('data-username')?.toLowerCase() || '';
-                const rowText = `${userId} ${name} ${username}`;
-                
-                if (searchTerm === '' || rowText.includes(searchTerm)) {
-                    row.style.display = '';
-                    hasResults = true;
-                } else {
-                    row.style.display = 'none';
-                }
+                const text = `${row.getAttribute('data-user-id')} ${row.getAttribute('data-name')} ${row.getAttribute('data-username')}`.toLowerCase();
+                if (term === '' || text.includes(term)) { row.style.display = ''; hasResults = true; }
+                else { row.style.display = 'none'; }
+            });
+            document.getElementById('noResults').style.display = hasResults ? 'none' : 'block';
+        }
+        
+        function clearSearch() { document.getElementById('searchInput').value = ''; filterUsers(); }
+        document.getElementById('searchInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') filterUsers(); });
+        
+        function openNotifyModal(target, userId = null, userName = null) {
+            const modal = document.getElementById('notifyModal');
+            const title = document.getElementById('modalTitle');
+            const targetInput = document.getElementById('notifyTarget');
+            const userIdInput = document.getElementById('notifyUserId');
+            
+            if (target === 'user') {
+                title.innerText = `📨 إرسال رسالة إلى ${userName || 'المستخدم'}`;
+                targetInput.value = 'user';
+                userIdInput.value = userId;
+            } else if (target === 'all_premium') {
+                title.innerText = '📢 إرسال إشعار لجميع المستخدمين المميزين';
+                targetInput.value = 'all_premium';
+                userIdInput.value = '';
+            } else if (target === 'half_yearly') {
+                title.innerText = '📅 إرسال إشعار لمشتركي الخطة نصف السنوي';
+                targetInput.value = 'half_yearly';
+                userIdInput.value = '';
+            } else if (target === 'yearly') {
+                title.innerText = '🎉 إرسال إشعار لمشتركي الخطة السنوي';
+                targetInput.value = 'yearly';
+                userIdInput.value = '';
+            } else if (target === 'lifetime') {
+                title.innerText = '💎 إرسال إشعار لمشتركي الخطة مدى الحياة';
+                targetInput.value = 'lifetime';
+                userIdInput.value = '';
+            }
+            modal.style.display = 'flex';
+        }
+        
+        function closeNotifyModal() {
+            document.getElementById('notifyModal').style.display = 'none';
+            document.getElementById('notificationMessage').value = '';
+        }
+        
+        async function sendNotification() {
+            const target = document.getElementById('notifyTarget').value;
+            const userId = document.getElementById('notifyUserId').value;
+            const message = document.getElementById('notificationMessage').value;
+            
+            if (!message.trim()) {
+                alert('الرجاء إدخال نص الرسالة');
+                return;
+            }
+            
+            const response = await fetch('/send-notification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target, user_id: userId, message })
             });
             
-            const noResultsDiv = document.getElementById('noResults');
-            if (noResultsDiv) {
-                noResultsDiv.style.display = hasResults ? 'none' : 'block';
-            }
+            const result = await response.json();
+            alert(result.message);
+            if (result.success) closeNotifyModal();
         }
-        
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-            filterUsers();
-        }
-        
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                filterUsers();
-            }
-        });
     </script>
 </body>
 </html>
