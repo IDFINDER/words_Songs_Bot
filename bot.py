@@ -442,14 +442,15 @@ def send_notification():
         users_to_notify = [int(user_id)]
         notification_type = 'individual'
         target_audience = f'user_{user_id}'
+    
     elif target == 'all_premium':
         response = supabase.table('users_poets_bot').select('user_id').eq('status', 'premium').execute()
         users_to_notify = [u['user_id'] for u in (response.data or [])]
         notification_type = 'broadcast'
         target_audience = 'all_premium'
+    
     elif target == 'half_yearly':
-        # جلب مستخدمي الخطة نصف السنوي
-        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').execute()
+        response = supabase.table('user_subscriptions_poets').select('user_id, plan_id').eq('status', 'active').execute()
         half_yearly_users = []
         for sub in (response.data or []):
             plan_response = supabase.table('subscription_plans_poets').select('name').eq('id', sub['plan_id']).execute()
@@ -458,8 +459,9 @@ def send_notification():
         users_to_notify = half_yearly_users
         notification_type = 'broadcast'
         target_audience = 'half_yearly'
+    
     elif target == 'yearly':
-        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').execute()
+        response = supabase.table('user_subscriptions_poets').select('user_id, plan_id').eq('status', 'active').execute()
         yearly_users = []
         for sub in (response.data or []):
             plan_response = supabase.table('subscription_plans_poets').select('name').eq('id', sub['plan_id']).execute()
@@ -468,8 +470,9 @@ def send_notification():
         users_to_notify = yearly_users
         notification_type = 'broadcast'
         target_audience = 'yearly'
+    
     elif target == 'lifetime':
-        response = supabase.table('user_subscriptions_poets').select('user_id').eq('status', 'active').execute()
+        response = supabase.table('user_subscriptions_poets').select('user_id, plan_id').eq('status', 'active').execute()
         lifetime_users = []
         for sub in (response.data or []):
             plan_response = supabase.table('subscription_plans_poets').select('name').eq('id', sub['plan_id']).execute()
@@ -478,13 +481,49 @@ def send_notification():
         users_to_notify = lifetime_users
         notification_type = 'broadcast'
         target_audience = 'lifetime'
+    
     elif target == 'free_users':
-    response = supabase.table('users_poets_bot').select('user_id').eq('status', 'free').execute()
-    users_to_notify = [u['user_id'] for u in (response.data or [])]
-    notification_type = 'broadcast'
-    target_audience = 'free_users'
+        response = supabase.table('users_poets_bot').select('user_id').eq('status', 'free').execute()
+        users_to_notify = [u['user_id'] for u in (response.data or [])]
+        notification_type = 'broadcast'
+        target_audience = 'free_users'
+    
     else:
-        return jsonify({'success': False, 'message': 'هدف غير صحيح'})
+        return jsonify({'success': False, 'message': 'هدف غير صحيح'}), 400
+    
+    if not users_to_notify:
+        return jsonify({'success': False, 'message': 'لا يوجد مستخدمين مستهدفين'}), 404
+    
+    # تسجيل الإشعار في قاعدة البيانات
+    notification_id = log_notification(notification_type, target_audience, int(user_id) if user_id and target == 'user' else None, message)
+    
+    sent_count = 0
+    for uid in users_to_notify:
+        try:
+            api_url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+            response = requests.post(api_url, data={'chat_id': uid, 'text': message, 'parse_mode': 'HTML'}, timeout=5)
+            
+            if response.status_code == 200:
+                sent_count += 1
+                if notification_id:
+                    log_notification_delivery(notification_id, uid, 'sent')
+            else:
+                if notification_id:
+                    log_notification_delivery(notification_id, uid, 'failed')
+                    
+        except Exception as e:
+            logger.error(f"Error sending to {uid}: {e}")
+            if notification_id:
+                log_notification_delivery(notification_id, uid, 'failed')
+    
+    # تحديث عدد الإرسال في سجل الإشعار
+    if notification_id:
+        try:
+            supabase.table('notification_log_poets').update({'sent_count': sent_count}).eq('id', notification_id).execute()
+        except Exception as e:
+            logger.error(f"Error updating sent_count: {e}")
+    
+    return jsonify({'success': True, 'message': f'تم إرسال الإشعار إلى {sent_count} من {len(users_to_notify)} مستخدم'})
     
     if not users_to_notify:
         return jsonify({'success': False, 'message': 'لا يوجد مستخدمين مستهدفين'})
