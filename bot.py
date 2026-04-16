@@ -2324,60 +2324,7 @@ def api_poets_users():
         user.pop('language_code', None)
     return jsonify(users)
 
-@app.route('/notifications-history')
-def notifications_history():
-    """عرض سجل الإشعارات المرسلة"""
-    if not session.get('logged_in'):
-        return redirect(url_for('admin_poets'))
-    
-    notifications = get_notifications_history(100)
-    
-    html = '''
-<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <title>سجل الإشعارات - بوت كلمات وشعراء</title>
-    <style>
-        body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #eee; font-family: Arial; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .card { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
-        h1 { color: #e94560; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        th { background: rgba(0,0,0,0.3); color: #e94560; }
-        .back-btn { background: #e94560; color: white; padding: 10px 20px; border-radius: 10px; text-decoration: none; display: inline-block; margin-bottom: 20px; }
-        .message { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <a href="/admin-poets" class="back-btn">🔙 العودة للوحة التحكم</a>
-        <div class="card">
-            <h1>📋 سجل الإشعارات المرسلة</h1>
-            <table>
-                <thead>
-                    <tr><th>#</th><th>النوع</th><th>الفئة المستهدفة</th><th>الرسالة</th><th>عدد المستلمين</th><th>تاريخ الإرسال</th></tr>
-                </thead>
-                <tbody>
-                    {% for n in notifications %}
-                    <tr>
-                        <td>{{ n.id }}</td>
-                        <td>{{ n.notification_type }}</td>
-                        <td>{{ n.target_audience }}</td>
-                        <td class="message">{{ n.message[:50] }}{% if n.message|length > 50 %}...{% endif %}</td>
-                        <td>{{ n.sent_count }}</td>
-                        <td>{{ n.sent_at[:16] if n.sent_at else '-' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</body>
-</html>
-'''
-    return render_template_string(html, notifications=notifications)
+
 # =============================================================================
 # القسم 11: تشغيل الخادم (Flask + Telegram Bot)
 # =============================================================================
