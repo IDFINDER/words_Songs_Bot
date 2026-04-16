@@ -575,7 +575,51 @@ def update_user_status(user_id, status, days=36500):
         logger.error(f"Error updating user status: {e}")
         return False
 
+# =============================================================================
+# دوال تسجيل الإشعارات
+# =============================================================================
 
+def log_notification(notification_type, target_audience, target_user_id, message):
+    """تسجيل إشعار في جدول notification_log_poets"""
+    try:
+        log_data = {
+            'notification_type': notification_type,
+            'target_audience': target_audience,
+            'target_user_id': target_user_id,
+            'message': message,
+            'sent_at': datetime.now().isoformat()
+        }
+        response = supabase.table('notification_log_poets').insert(log_data).execute()
+        return response.data[0]['id'] if response.data else None
+    except Exception as e:
+        logger.error(f"Error logging notification: {e}")
+        return None
+
+
+def log_notification_delivery(notification_id, user_id, status='sent'):
+    """تسجيل إرسال إشعار لكل مستخدم في جدول notification_delivery_poets"""
+    try:
+        delivery_data = {
+            'notification_id': notification_id,
+            'user_id': user_id,
+            'status': status,
+            'delivered_at': datetime.now().isoformat()
+        }
+        supabase.table('notification_delivery_poets').insert(delivery_data).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Error logging notification delivery: {e}")
+        return False
+
+
+def get_notifications_history(limit=50):
+    """جلب سجل الإشعارات المرسلة"""
+    try:
+        response = supabase.table('notification_log_poets').select('*').order('sent_at', desc=True).limit(limit).execute()
+        return response.data if response.data else []
+    except Exception as e:
+        logger.error(f"Error getting notifications history: {e}")
+        return []
 # =============================================================================
 # القسم 6: دوال البحث المتقدم
 # =============================================================================
