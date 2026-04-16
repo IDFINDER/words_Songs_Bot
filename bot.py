@@ -478,6 +478,11 @@ def send_notification():
         users_to_notify = lifetime_users
         notification_type = 'broadcast'
         target_audience = 'lifetime'
+    elif target == 'free_users':
+    response = supabase.table('users_poets_bot').select('user_id').eq('status', 'free').execute()
+    users_to_notify = [u['user_id'] for u in (response.data or [])]
+    notification_type = 'broadcast'
+    target_audience = 'free_users'
     else:
         return jsonify({'success': False, 'message': 'هدف غير صحيح'})
     
