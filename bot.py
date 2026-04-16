@@ -1614,9 +1614,13 @@ def admin_poets():
             return render_template_string(LOGIN_FORM, error="❌ اسم المستخدم أو كلمة المرور غير صحيحة")
     
     if session.get('logged_in'):
-        users = get_all_users()
+        users = get_users_with_subscriptions()
         stats = get_statistics()
+        sub_stats = get_subscription_stats()
         daily_labels, daily_data = get_daily_usage_last_7_days()
+        
+        # دمج الإحصائيات
+        stats.update(sub_stats)
         
         return render_template('admin_poets.html', 
                               users=users, 
