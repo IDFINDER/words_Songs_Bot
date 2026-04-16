@@ -712,7 +712,15 @@ def log_notification_delivery(notification_id, user_id, status='sent'):
     except Exception as e:
         logger.error(f"Error logging notification delivery: {e}")
         return False
-
+        
+def get_notifications_history(limit=100):
+    """جلب سجل الإشعارات المرسلة"""
+    try:
+        response = supabase.table('notification_log_poets').select('*').order('sent_at', desc=True).limit(limit).execute()
+        return response.data if response.data else []
+    except Exception as e:
+        logger.error(f"Error getting notifications history: {e}")
+        return []
 
 @app.route('/notifications-history')
 def notifications_history():
