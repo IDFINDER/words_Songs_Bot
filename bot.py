@@ -73,7 +73,11 @@ PORT = int(os.environ.get('PORT', 10000))
 
 TOKEN = os.environ.get('TELEGRAM_TOKEN')
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY')
+SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')  # للقراءة العامة
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')  # للعمليات الحساسة
+
+# استخدم مفتاح الخدمة إذا وجد، وإلا استخدم المفتاح العادي
+SUPABASE_KEY = SUPABASE_SERVICE_KEY if SUPABASE_SERVICE_KEY else SUPABASE_ANON_KEY
 BOT_NAME = os.environ.get('BOT_NAME', 'kalimat_ws_shoara_bot')
 FREE_LIMIT = int(os.environ.get('FREE_LIMIT', '5'))
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID', '7850462368')
