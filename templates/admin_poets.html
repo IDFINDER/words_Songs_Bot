@@ -61,50 +61,50 @@
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
             margin-bottom: 30px;
         }
         .stat-card {
             background: rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
             border-radius: 16px;
-            padding: 15px;
+            padding: 12px;
             text-align: center;
             transition: transform 0.2s;
             border: 1px solid rgba(255,255,255,0.1);
         }
         .stat-card:hover { transform: translateY(-3px); background: rgba(255,255,255,0.15); }
-        .stat-number { font-size: 2rem; font-weight: bold; background: linear-gradient(135deg, #e94560, #533483); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .stat-label { color: #aaa; font-size: 0.75rem; margin-top: 5px; }
+        .stat-number { font-size: 1.8rem; font-weight: bold; background: linear-gradient(135deg, #e94560, #533483); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .stat-label { color: #aaa; font-size: 0.7rem; margin-top: 5px; }
         
         .charts-section {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
             margin-bottom: 30px;
         }
         .chart-card {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 20px;
+            padding: 15px;
             border: 1px solid rgba(255,255,255,0.1);
         }
         .chart-card h3 {
             color: #e94560;
-            margin-bottom: 15px;
-            font-size: 1rem;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
             border-right: 3px solid #e94560;
-            padding-right: 12px;
+            padding-right: 10px;
         }
-        .chart-container { position: relative; height: 250px; }
+        .chart-container { position: relative; height: 220px; }
         
         .search-section {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 20px;
+            padding: 15px;
             margin-bottom: 20px;
         }
         .search-box {
@@ -114,10 +114,10 @@
         }
         .search-input {
             flex: 1;
-            padding: 12px 15px;
+            padding: 10px 15px;
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             background: rgba(0,0,0,0.3);
             color: white;
         }
@@ -126,7 +126,7 @@
             background: #e94560;
             color: white;
             border: none;
-            padding: 12px 25px;
+            padding: 10px 20px;
             border-radius: 12px;
             cursor: pointer;
         }
@@ -148,41 +148,67 @@
             flex-wrap: wrap;
             gap: 15px;
         }
-        .refresh-btn, .notify-btn {
+        .refresh-btn {
             background: #e94560;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 10px;
             cursor: pointer;
         }
-        .notify-btn { background: #28a745; }
+        
+        /* أزرار الإشعارات */
+        .notify-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+        }
+        .notify-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .notify-btn:hover { opacity: 0.9; transform: scale(1.02); }
+        .notify-all { background: #e94560; }
+        .notify-half { background: #ffc107; color: #1a1a2e; }
+        .notify-yearly { background: #28a745; }
+        .notify-lifetime { background: #e94560; }
+        .notify-free { background: #17a2b8; }
         
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; }
+        th, td { padding: 8px 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; }
         th { background: rgba(0,0,0,0.3); color: #e94560; font-weight: 600; }
         tr:hover { background: rgba(255,255,255,0.05); }
         
-        .badge-premium { background: linear-gradient(135deg, #e94560, #533483); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
-        .badge-free { background: rgba(255,255,255,0.2); color: #aaa; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
-        .badge-half { background: #ffc107; color: #1a1a2e; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
-        .badge-yearly { background: #28a745; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
-        .badge-lifetime { background: #e94560; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .badge-premium { background: linear-gradient(135deg, #e94560, #533483); color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.65rem; display: inline-block; }
+        .badge-free { background: rgba(255,255,255,0.2); color: #aaa; padding: 3px 8px; border-radius: 20px; font-size: 0.65rem; display: inline-block; }
+        .badge-half { background: #ffc107; color: #1a1a2e; padding: 3px 8px; border-radius: 20px; font-size: 0.65rem; display: inline-block; }
+        .badge-yearly { background: #28a745; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.65rem; display: inline-block; }
+        .badge-lifetime { background: #e94560; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.65rem; display: inline-block; }
         
-        .usage-badge { background: #e94560; color: white; padding: 4px 10px; border-radius: 16px; font-size: 0.7rem; }
-        .total-badge { background: #533483; color: white; padding: 4px 10px; border-radius: 16px; font-size: 0.7rem; }
+        .usage-badge { background: #e94560; color: white; padding: 3px 8px; border-radius: 16px; font-size: 0.65rem; }
+        .total-badge { background: #533483; color: white; padding: 3px 8px; border-radius: 16px; font-size: 0.65rem; }
         
-        .upgrade-btn, .downgrade-btn {
+        .upgrade-btn, .downgrade-btn, .send-msg-btn {
             border: none;
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             margin: 2px;
         }
         .upgrade-btn { background: #28a745; color: white; }
         .downgrade-btn { background: #dc3545; color: white; }
-        .send-msg-btn { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; margin: 2px; }
+        .send-msg-btn { background: #17a2b8; color: white; }
         
         .modal {
             display: none;
@@ -223,18 +249,18 @@
             cursor: pointer;
             margin: 5px;
         }
-        .modal-content .close {
-            background: #6c757d;
-        }
+        .modal-content .close { background: #6c757d; }
+        
         .footer { text-align: center; margin-top: 30px; padding: 20px; color: #888; font-size: 0.7rem; border-top: 1px solid rgba(255,255,255,0.1); }
         .footer a { color: #e94560; text-decoration: none; }
         
         @media (max-width: 768px) {
             .charts-section { grid-template-columns: 1fr; }
-            th, td { font-size: 0.65rem; padding: 5px; }
+            th, td { font-size: 0.6rem; padding: 4px; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .nav-buttons { position: static; justify-content: center; margin-top: 15px; }
             .logout-btn { position: static; margin-bottom: 10px; display: inline-block; }
+            .notify-buttons { justify-content: center; }
         }
     </style>
 </head>
@@ -244,6 +270,7 @@
             <a href="/admin-logout" class="logout-btn">🚪 خروج</a>
             <div class="nav-buttons">
                 <a href="/admin-prices" class="nav-btn">💰 تعديل الأسعار</a>
+                <a href="/notifications-history" class="nav-btn">📋 سجل الإشعارات</a>
                 <a href="/admin-poets" class="nav-btn">📊 تحديث</a>
             </div>
             <h1>📖 لوحة إدارة بوت كلمات وشعراء</h1>
@@ -282,13 +309,16 @@
         <div class="users-section">
             <div class="section-header">
                 <h2>📋 قائمة المستخدمين</h2>
-                <div>
-                    <button class="notify-btn" onclick="openNotifyModal('all_premium')">📢 إشعار لجميع المميزين</button>
-                    <button class="notify-btn" onclick="openNotifyModal('half_yearly')">📅 إشعار لنصف سنوي</button>
-                    <button class="notify-btn" onclick="openNotifyModal('yearly')">🎉 إشعار لسنوي</button>
-                    <button class="notify-btn" onclick="openNotifyModal('lifetime')">💎 إشعار لمدى الحياة</button>
-                    <button class="refresh-btn" onclick="location.reload()">🔄 تحديث</button>
-                </div>
+                <button class="refresh-btn" onclick="location.reload()">🔄 تحديث</button>
+            </div>
+            
+            <!-- أزرار الإشعارات -->
+            <div class="notify-buttons">
+                <button class="notify-btn notify-all" onclick="openNotifyModal('all_premium')">📢 إشعار لجميع المميزين</button>
+                <button class="notify-btn notify-half" onclick="openNotifyModal('half_yearly')">📅 إشعار لنصف سنوي</button>
+                <button class="notify-btn notify-yearly" onclick="openNotifyModal('yearly')">🎉 إشعار لسنوي</button>
+                <button class="notify-btn notify-lifetime" onclick="openNotifyModal('lifetime')">💎 إشعار لمدى الحياة</button>
+                <button class="notify-btn notify-free" onclick="openNotifyModal('free_users')">🎁 إشعار للمجانيين</button>
             </div>
             
             <div class="search-section">
@@ -339,7 +369,7 @@
                             <td><span class="total-badge">📊 {{ user.total_uses|default(0) }}</span></td>
                             <td>
                                 {% if user.status == 'free' %}
-                                    <select id="plan_{{ user.user_id }}" style="background:#1a1a2e; color:white; border:1px solid #e94560; border-radius:6px; padding:4px; font-size:0.7rem;">
+                                    <select id="plan_{{ user.user_id }}" style="background:#1a1a2e; color:white; border:1px solid #e94560; border-radius:6px; padding:3px; font-size:0.65rem;">
                                         <option value="half_yearly">نصف سنوي - 30$</option>
                                         <option value="yearly">سنوي - 48$</option>
                                         <option value="lifetime">مدى الحياة - 100$</option>
@@ -455,6 +485,10 @@
             } else if (target === 'lifetime') {
                 title.innerText = '💎 إرسال إشعار لمشتركي الخطة مدى الحياة';
                 targetInput.value = 'lifetime';
+                userIdInput.value = '';
+            } else if (target === 'free_users') {
+                title.innerText = '🎁 إرسال إشعار لجميع المستخدمين المجانيين';
+                targetInput.value = 'free_users';
                 userIdInput.value = '';
             }
             modal.style.display = 'flex';
